@@ -297,18 +297,20 @@ begin
     raise exception 'Insufficient stock' using errcode = '22003';
   end if;
 
-  if p_movement_type = 'IN' then
-    update public.medicine_batches
-    set quantity = quantity + p_quantity,
-        purchase_price = coalesce(p_unit_cost, purchase_price)
-    where id = p_batch_id;
-  else
-    update public.medicine_batches
-    set quantity = quantity - p_quantity
-    where id = p_batch_id;
-  end if;
-
   begin
+    -- Keep the quantity update inside this exception block so a duplicate
+    -- idempotency key rolls back the update as well as the attempted insert.
+    if p_movement_type = 'IN' then
+      update public.medicine_batches
+      set quantity = quantity + p_quantity,
+          purchase_price = coalesce(p_unit_cost, purchase_price)
+      where id = p_batch_id;
+    else
+      update public.medicine_batches
+      set quantity = quantity - p_quantity
+      where id = p_batch_id;
+    end if;
+
     insert into public.stock_movements (
       shop_id, medicine_id, batch_id, movement_type,
       quantity, unit_cost, note, idempotency_key, created_by
@@ -319,8 +321,6 @@ begin
     )
     returning id into v_movement_id;
   exception when unique_violation then
-    -- The subtransaction rolls back the quantity update if another request
-    -- inserted the same idempotency key concurrently.
     if p_idempotency_key is null then
       raise;
     end if;
@@ -343,7 +343,7 @@ grant execute on function public.post_stock_movement(uuid, text, numeric, numeri
 -- Remove anonymous access; authenticated users work through RLS.
 revoke all on public.profiles, public.shops, public.medicines,
   public.medicine_batches, public.stock_movements, public.purchase_shortlist
-from anon;
+from anon, authenticated;
 
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.shops to authenticated;
