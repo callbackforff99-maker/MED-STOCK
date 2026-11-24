@@ -30,8 +30,11 @@ import com.zerox.medistock.data.*
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-private val Green = Color(0xFF176B4D)
-private val Bg = Color(0xFFF5F7F4)
+private val Green = Color(0xFF00D98B)
+private val Bg = Color(0xFF080B0A)
+private val DarkSurface = Color(0xFF151E19)
+private val MutedText = Color(0xFF89968F)
+private val Crimson = Color(0xFFFF626B)
 
 class MainActivity : ComponentActivity() {
  override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,18 +42,27 @@ class MainActivity : ComponentActivity() {
   val dao = MedicineDatabase.get(this).dao()
   val prefs = getSharedPreferences("stock_x_settings", MODE_PRIVATE)
   setContent {
-   var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
-   val scheme = if (darkMode) darkColorScheme(primary = Color(0xFF35D69A), background = Color(0xFF080E0B), surface = Color(0xFF121B16), onBackground = Color(0xFFE8F2EC), onSurface = Color(0xFFE8F2EC)) else lightColorScheme(primary = Green, background = Bg, surface = Color.White)
+   var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
+   val scheme = if (darkMode) darkColorScheme(primary = Green, onPrimary = Color(0xFF002116), secondary = Color(0xFF6DE7B4), background = Bg, onBackground = Color(0xFFF4F7F5), surface = DarkSurface, onSurface = Color(0xFFF4F7F5), surfaceVariant = Color(0xFF202B25), onSurfaceVariant = MutedText, outline = Color(0xFF34443B), error = Crimson) else lightColorScheme(primary = Color(0xFF087A53), onPrimary = Color.White, background = Color(0xFFF3F7F4), onBackground = Color(0xFF14221B), surface = Color.White, onSurface = Color(0xFF14221B), surfaceVariant = Color(0xFFE7EFEA), onSurfaceVariant = Color(0xFF62736A), outline = Color(0xFFD3DED7)
    MaterialTheme(colorScheme = scheme) {
     var showSplash by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) { delay(1800); showSplash = false }
-    var guestEntered by remember { mutableStateOf(prefs.getBoolean("guest_entered", false)) }
+    var guestExplored by remember { mutableStateOf(prefs.getBoolean("guest_explored", false)) }
+    var profileCreated by remember { mutableStateOf(prefs.getBoolean("profile_created", false)) }
+    var guestSession by remember { mutableStateOf(false) }
     if (showSplash) StockXSplash()
-    else if (!guestEntered) GuestWelcome(
-     onExplore = { guestEntered = true; prefs.edit().putBoolean("guest_entered", true).apply() },
-     onCreateAccount = { }
+    else if (!guestExplored && !profileCreated) GuestWelcome(
+     onExplore = { guestExplored = true; guestSession = true; prefs.edit().putBoolean("guest_explored", true).apply() },
+     onCreateAccount = { guestExplored = true; prefs.edit().putBoolean("guest_explored", true).apply() }
     )
-    else MediStockApp(this@MainActivity, dao, darkMode) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
+    else if (!profileCreated && !guestSession) ProfileSetup(
+     onComplete = { owner, shop ->
+      prefs.edit().putBoolean("profile_created", true).putString("owner_name", owner).putString("shop_name", shop).apply()
+      profileCreated = true
+     },
+     onExplore = { guestSession = true }
+    )
+    else MediStockApp(this@MainActivity, dao, darkMode, prefs) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
    }
   }
  }
@@ -58,27 +70,47 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun GuestWelcome(onExplore: () -> Unit, onCreateAccount: () -> Unit) {
- var showInfo by remember { mutableStateOf(false) }
- Box(Modifier.fillMaxSize().background(Bg).padding(26.dp), contentAlignment = Alignment.Center) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-   Text("STOCK X", color = Green, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-   Text("Explore before you sign up.", fontSize = 21.sp, fontWeight = FontWeight.Bold)
-   Text("Browse the app and try the inventory features as a guest. You don't need to create an ID first.", color = Color.Gray)
-   Button(onClick = onExplore, modifier = Modifier.fillMaxWidth()) { Text("Explore as guest") }
-   OutlinedButton(onClick = { showInfo = true }, modifier = Modifier.fillMaxWidth()) { Text("Create account") }
-   Text("You can create an account after exploring.", color = Color.Gray, fontSize = 12.sp)
+ Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), contentAlignment = Alignment.Center) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+   Box(Modifier.size(104.dp).background(Color(0xFF10271D), RoundedCornerShape(32.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Inventory2, null, tint = Green, modifier = Modifier.size(54.dp)) }
+   Text("STOCK X", color = Green, fontSize = 31.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
+   Text("Your shop. In control.", color = MaterialTheme.colorScheme.onBackground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+   Text("Explore inventory, stock movement and reports before creating your profile.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Explore, null, tint = Green); Spacer(Modifier.width(10.dp)); Text("Guest preview", fontWeight = FontWeight.Bold) }
+     Text("No sign-up needed to take a look around. Your locally entered demo data stays on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+     Button(onClick = onExplore, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.ArrowForward, null); Spacer(Modifier.width(8.dp)); Text("Explore as guest") }
+     TextButton(onClick = onCreateAccount, modifier = Modifier.fillMaxWidth()) { Text("I want to create my profile") }
+    }
+   }
+   Text("DEVELOPED BY ZEROX", color = MutedText, fontSize = 11.sp, letterSpacing = 2.sp)
   }
  }
- if (showInfo) AlertDialog(
-  onDismissRequest = { showInfo = false },
-  title = { Text("Explore first") },
-  text = { Text("Account creation and cloud sign-in will be enabled in the next authentication step. For now, enter as a guest and explore STOCK X without an ID.") },
-  confirmButton = { TextButton(onClick = { showInfo = false; onExplore() }) { Text("Continue as guest") } }
- )
 }
 
 @Composable
-private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
+private fun ProfileSetup(onComplete: (String, String) -> Unit, onExplore: () -> Unit) {
+ var owner by remember { mutableStateOf("") }
+ var shop by remember { mutableStateOf("") }
+ Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Center) {
+  Box(Modifier.size(66.dp).background(Color(0xFF10271D), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAddAlt1, null, tint = Green, modifier = Modifier.size(32.dp)) }
+  Spacer(Modifier.height(22.dp))
+  Text("Welcome back.", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+  Text("Create your profile to continue using STOCK X.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+  Spacer(Modifier.height(24.dp))
+  OutlinedTextField(owner, { owner = it }, Modifier.fillMaxWidth(), label = { Text("Owner name") }, leadingIcon = { Icon(Icons.Default.Person, null) }, singleLine = true, shape = RoundedCornerShape(16.dp))
+  Spacer(Modifier.height(12.dp))
+  OutlinedTextField(shop, { shop = it }, Modifier.fillMaxWidth(), label = { Text("Shop name") }, leadingIcon = { Icon(Icons.Default.Store, null) }, singleLine = true, shape = RoundedCornerShape(16.dp))
+  Spacer(Modifier.height(18.dp))
+  Button(onClick = { onComplete(owner.trim(), shop.trim()) }, enabled = owner.isNotBlank() && shop.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) { Text("Create profile & continue") }
+  Text("Your guest inventory remains saved on this device.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+  TextButton(onClick = onExplore, modifier = Modifier.fillMaxWidth()) { Text("Continue guest session") }
+ }
+}
+
+@Composable
+private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, prefs: android.content.SharedPreferences, onDarkModeChange: (Boolean) -> Unit) {
  val medicines by dao.observeAll().collectAsState(initial = emptyList())
  val scope = rememberCoroutineScope()
  var page by remember { mutableIntStateOf(0) }
@@ -95,10 +127,10 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
   } }
  ) { pad ->
   when (page) {
-   0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true })
+   0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
    1 -> InventoryScreen(medicines, search, { search = it }, Modifier.padding(pad), { item, action -> selected = item; mode = action })
    2 -> ShortlistScreen(medicines.filter { it.quantity <= it.minimumStock }, Modifier.padding(pad))
-   3 -> MoreScreen(Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 })
+   3 -> MoreScreen(Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
    4 -> MonthlyReportScreen(context, dao, medicines) { page = 3 }
   }
  }
@@ -119,12 +151,12 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
 }
 
 @Composable
-private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory: () -> Unit, add: () -> Unit) {
+private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory: () -> Unit, add: () -> Unit, ownerName: String, shopName: String) {
  val low = data.count { it.quantity <= it.minimumStock }
  val value = data.sumOf { it.quantity * it.unitPrice }
  LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-  item { Column(Modifier.padding(top = 24.dp)) { Text("STOCK X", color = MaterialTheme.colorScheme.primary, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold); Text("Stock management, made simple", color = Color.Gray) } }
-  item { Card(colors = CardDefaults.cardColors(containerColor = Green), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("Good day!", color = Color.White.copy(alpha = .8f)); Text("Your shop at a glance", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold); Text("Main Shop • Active", color = Color.White) } } }
+  item { Column(Modifier.padding(top = 24.dp)) { Text("STOCK X", color = MaterialTheme.colorScheme.primary, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp); Text("Stock management, made simple", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+  item { Card(colors = CardDefaults.cardColors(containerColor = Green), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("GOOD DAY, $ownerName", color = Color.White.copy(alpha = .75f), fontSize = 11.sp, letterSpacing = 1.5.sp); Text("Your shop at a glance", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold); Text("$shopName • Active", color = Color.White.copy(alpha = .85f)) } } }
   item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("Total medicines", data.size.toString(), Modifier.weight(1f)); StatCard("Stock value", "৳" + String.format(Locale.US, "%.2f", value), Modifier.weight(1f)) } }
   item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("Low stock", low.toString(), Modifier.weight(1f)); StatCard("Items tracked", data.size.toString(), Modifier.weight(1f)) } }
   item { Text("Quick actions", fontWeight = FontWeight.Bold, fontSize = 18.sp); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { ActionCard("Add medicine", add, Modifier.weight(1f)); ActionCard("View inventory", inventory, Modifier.weight(1f)) } }
@@ -173,36 +205,67 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
 }
 
 @Composable
-private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit) {
+private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
  val uri = LocalUriHandler.current
- Column(modifier.fillMaxSize().padding(20.dp)) {
-  Text("More", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-  Text("Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp, bottom = 8.dp))
-  Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-   ListItem(
-    headlineContent = { Text("Dark mode", fontWeight = FontWeight.SemiBold) },
-    supportingContent = { Text(if (darkMode) "Dark theme is enabled" else "Use the dark emerald theme") },
-    trailingContent = { Switch(checked = darkMode, onCheckedChange = onDarkModeChange) }
-   )
-  }
-  Spacer(Modifier.height(10.dp))
-  Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth().clickable(onClick = onReports)) {
-   ListItem(headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Sales, purchases and remaining stock PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null) })
-  }
-  listOf("Shop profile", "Owner details", "Backup & restore", "About STOCK X").forEach { label -> ListItem(headlineContent = { Text(label) }) }
-  Spacer(Modifier.height(14.dp))
-  Text("CONTACT DEVELOPER", color = Green, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-  Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-   Column(Modifier.padding(12.dp)) {
-    Text("Developed by ZEROX", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-    Text("Connect with the developer", color = Color.Gray, fontSize = 12.sp)
-    Spacer(Modifier.height(8.dp))
-    OutlinedButton(onClick = { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Link, null); Spacer(Modifier.width(8.dp)); Text("Instagram") }
-    OutlinedButton(onClick = { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Link, null); Spacer(Modifier.width(8.dp)); Text("Facebook") }
+ LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+  item { Text("Settings", fontSize = 27.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 22.dp), color = MaterialTheme.colorScheme.onBackground) }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+     Box(Modifier.size(54.dp).background(Color(0xFF123A29), RoundedCornerShape(19.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Store, null, tint = Green, modifier = Modifier.size(27.dp)) }
+     Spacer(Modifier.width(13.dp))
+     Column(Modifier.weight(1f)) { Text(shopName, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Owner: $ownerName", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+     Icon(Icons.Default.Verified, null, tint = Green)
+    }
    }
   }
-  Spacer(Modifier.height(12.dp))
-  Text("Offline local database • v1.0.0", color = Color.Gray, fontSize = 12.sp)
+  item { Text("PREFERENCES", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
+    ListItem(leadingContent = { Icon(Icons.Default.DarkMode, null, tint = Green) }, headlineContent = { Text("Dark mode", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text(if (darkMode) "ZEROX Midnight is active" else "Switch to ZEROX Midnight") }, trailingContent = { Switch(checked = darkMode, onCheckedChange = onDarkModeChange) })
+   }
+  }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onReports)) {
+    ListItem(leadingContent = { Icon(Icons.Default.PictureAsPdf, null, tint = Green) }, headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Sales, purchases and remaining stock PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null) })
+   }
+  }
+  item { Text("DEVELOPER", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(18.dp)) {
+     Row(verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.size(62.dp).background(Brush.linearGradient(listOf(Color(0xFF00D98B), Color(0xFF075B3D))), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Text("S", color = Color(0xFF04130C), fontSize = 30.sp, fontWeight = FontWeight.Black) }
+      Spacer(Modifier.width(14.dp))
+      Column(Modifier.weight(1f)) {
+       Text("SHAFIN", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
+       Text("DEVELOPED BY ZEROX", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+       Text("App Developer", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+      }
+      Icon(Icons.Default.Verified, null, tint = Green)
+     }
+     Spacer(Modifier.height(17.dp))
+     Text("CONNECT WITH ME", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+     Spacer(Modifier.height(9.dp))
+     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+      DeveloperLink("Instagram", Icons.Default.CameraAlt, Modifier.weight(1f)) { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }
+      DeveloperLink("Facebook", Icons.Default.Facebook, Modifier.weight(1f)) { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }
+     }
+    }
+   }
+  }
+  item { Text("ZEROX • STOCK X 1.0.0", color = MutedText, fontSize = 11.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+ }
+}
+
+@Composable
+private fun DeveloperLink(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
+ Card(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+  Row(Modifier.padding(horizontal = 12.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+   Icon(icon, null, tint = Green, modifier = Modifier.size(19.dp))
+   Spacer(Modifier.width(7.dp))
+   Text(label, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+  }
  }
 }
 
@@ -253,11 +316,11 @@ private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, c
 
 @Composable
 private fun StatCard(title: String, value: String, modifier: Modifier) {
- Card(modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(17.dp)) { Column(Modifier.padding(15.dp)) { Text(title, color = Color.Gray, fontSize = 12.sp); Text(value, color = Green, fontSize = 20.sp, fontWeight = FontWeight.Bold) } }
+ Card(modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(17.dp)) { Column(Modifier.padding(15.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp); Text(value, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold) } }
 }
 @Composable
 private fun ActionCard(label: String, action: () -> Unit, modifier: Modifier) {
- Card(modifier.height(64.dp).clickable(onClick = action), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(15.dp)) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(label, color = Green, fontWeight = FontWeight.SemiBold) } }
+ Card(modifier.height(64.dp).clickable(onClick = action), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(15.dp)) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(label, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) } }
 }
 @Composable
 private fun EmptyCard(title: String, description: String) {
