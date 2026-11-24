@@ -17,7 +17,17 @@ android {
         versionName = "1.0.0"
     }
 
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
+    val localProps = java.util.Properties().apply {
+        val propsFile = rootProject.file("local.properties")
+        if (propsFile.exists()) propsFile.inputStream().use { load(it) }
+    }
+    val supabaseUrl = localProps.getProperty("SUPABASE_URL") ?: "https://cmzbothdqnltrsfxvniv.supabase.co"
+    val supabaseKey = localProps.getProperty("SUPABASE_PUBLISHABLE_KEY") ?: "sb_publishable_tiv6KVccpBYFUStAVvMW_w_sQ-i0KdO"
+    defaultConfig {
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
