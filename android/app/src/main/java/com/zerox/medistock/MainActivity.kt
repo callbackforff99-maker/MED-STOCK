@@ -105,7 +105,6 @@ private fun ProfileSetup(onComplete: (String, String) -> Unit, onExplore: () -> 
   Spacer(Modifier.height(18.dp))
   Button(onClick = { onComplete(owner.trim(), shop.trim()) }, enabled = owner.isNotBlank() && shop.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) { Text("Create profile & continue") }
   Text("Your guest inventory remains saved on this device.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-  TextButton(onClick = onExplore, modifier = Modifier.fillMaxWidth()) { Text("Continue guest session") }
  }
 }
 
@@ -249,7 +248,7 @@ private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: 
      Spacer(Modifier.height(9.dp))
      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
       DeveloperLink("Instagram", Icons.Default.CameraAlt, Modifier.weight(1f)) { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }
-      DeveloperLink("Facebook", Icons.Default.Facebook, Modifier.weight(1f)) { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }
+      DeveloperLink("Facebook", Icons.Default.People, Modifier.weight(1f)) { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }
      }
     }
    }
