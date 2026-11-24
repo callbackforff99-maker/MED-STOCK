@@ -27,7 +27,8 @@ private val SetupGreen = Color(0xFF176B4D)
 @Composable
 fun StockXSetupFlow(
     onBack: () -> Unit = {},
-    onSupabaseRequired: () -> Unit
+    onSupabaseRequired: (SetupInput) -> Unit,
+    onContinueOffline: () -> Unit = {}
 ) {
     var stage by remember { mutableIntStateOf(0) }
     var createAccount by remember { mutableStateOf(true) }
@@ -113,12 +114,18 @@ fun StockXSetupFlow(
                 OutlinedTextField(address, { address = it }, Modifier.fillMaxWidth(),
                     label = { Text("Shop address (optional)") }, minLines = 2)
                 Button(
-                    onClick = onSupabaseRequired,
+                    onClick = {
+                        onSupabaseRequired(SetupInput(email.trim(), password, createAccount,
+                            fullName.trim(), ownerPhone.trim(), shopName.trim(), shopPhone.trim(), address.trim()))
+                    },
                     enabled = shopName.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp)
                 ) { Text("Create shop & open STOCK X", fontWeight = FontWeight.Bold) }
-                Text("Account, owner and shop details will be saved after Supabase is connected. Existing local inventory will be preserved.",
+                OutlinedButton(onClick = onContinueOffline, modifier = Modifier.fillMaxWidth()) {
+                    Text("Continue offline for now")
+                }
+                Text("Existing local inventory will be preserved. Online setup requires the Supabase database migration.",
                     color = Color.Gray, fontSize = 12.sp)
             }
         }
