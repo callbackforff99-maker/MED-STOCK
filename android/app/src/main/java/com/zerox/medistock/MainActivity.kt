@@ -1,5 +1,6 @@
 package com.zerox.medistock
 import android.os.Bundle
+import android.content.Context
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.shadow
@@ -43,14 +44,41 @@ class MainActivity : ComponentActivity() {
    MaterialTheme(colorScheme = scheme) {
     var showSplash by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) { delay(1800); showSplash = false }
-    if (showSplash) StockXSplash() else MediStockApp(dao, darkMode) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
+    var guestEntered by remember { mutableStateOf(prefs.getBoolean("guest_entered", false)) }
+    if (showSplash) StockXSplash()
+    else if (!guestEntered) GuestWelcome(
+     onExplore = { guestEntered = true; prefs.edit().putBoolean("guest_entered", true).apply() },
+     onCreateAccount = { }
+    )
+    else MediStockApp(this@MainActivity, dao, darkMode) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
    }
   }
  }
 }
 
 @Composable
-private fun MediStockApp(dao: MedicineDao, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
+private fun GuestWelcome(onExplore: () -> Unit, onCreateAccount: () -> Unit) {
+ var showInfo by remember { mutableStateOf(false) }
+ Box(Modifier.fillMaxSize().background(Bg).padding(26.dp), contentAlignment = Alignment.Center) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+   Text("STOCK X", color = Green, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+   Text("Explore before you sign up.", fontSize = 21.sp, fontWeight = FontWeight.Bold)
+   Text("Browse the app and try the inventory features as a guest. You don't need to create an ID first.", color = Color.Gray)
+   Button(onClick = onExplore, modifier = Modifier.fillMaxWidth()) { Text("Explore as guest") }
+   OutlinedButton(onClick = { showInfo = true }, modifier = Modifier.fillMaxWidth()) { Text("Create account") }
+   Text("You can create an account after exploring.", color = Color.Gray, fontSize = 12.sp)
+  }
+ }
+ if (showInfo) AlertDialog(
+  onDismissRequest = { showInfo = false },
+  title = { Text("Explore first") },
+  text = { Text("Account creation and cloud sign-in will be enabled in the next authentication step. For now, enter as a guest and explore STOCK X without an ID.") },
+  confirmButton = { TextButton(onClick = { showInfo = false; onExplore() }) { Text("Continue as guest") } }
+ )
+}
+
+@Composable
+private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
  val medicines by dao.observeAll().collectAsState(initial = emptyList())
  val scope = rememberCoroutineScope()
  var page by remember { mutableIntStateOf(0) }
@@ -70,7 +98,8 @@ private fun MediStockApp(dao: MedicineDao, darkMode: Boolean, onDarkModeChange: 
    0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true })
    1 -> InventoryScreen(medicines, search, { search = it }, Modifier.padding(pad), { item, action -> selected = item; mode = action })
    2 -> ShortlistScreen(medicines.filter { it.quantity <= it.minimumStock }, Modifier.padding(pad))
-   else -> MoreScreen(Modifier.padding(pad), darkMode, onDarkModeChange)
+   3 -> MoreScreen(Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 })
+   4 -> MonthlyReportScreen(context, dao, medicines) { page = 3 }
   }
  }
  if (addOpen) AddMedicineDialog({ addOpen = false }) { n, s, c, p, q, min ->
@@ -79,7 +108,12 @@ private fun MediStockApp(dao: MedicineDao, darkMode: Boolean, onDarkModeChange: 
  }
  selected?.let { item -> StockDialog(item, mode, { selected = null }) { amount ->
   val updated = if (mode == "IN") item.quantity + amount else item.quantity - amount
-  scope.launch { dao.setQty(item.id, updated) }
+  scope.launch {
+   dao.saveMovementAndQty(
+    StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.unitPrice, totalAmount = amount * item.unitPrice),
+    updated
+   )
+  }
   selected = null
  } }
 }
@@ -139,7 +173,7 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
 }
 
 @Composable
-private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
+private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit) {
  val uri = LocalUriHandler.current
  Column(modifier.fillMaxSize().padding(20.dp)) {
   Text("More", fontSize = 26.sp, fontWeight = FontWeight.Bold)
@@ -152,6 +186,9 @@ private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: 
    )
   }
   Spacer(Modifier.height(10.dp))
+  Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth().clickable(onClick = onReports)) {
+   ListItem(headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Sales, purchases and remaining stock PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null) })
+  }
   listOf("Shop profile", "Owner details", "Backup & restore", "About STOCK X").forEach { label -> ListItem(headlineContent = { Text(label) }) }
   Spacer(Modifier.height(14.dp))
   Text("CONTACT DEVELOPER", color = Green, fontWeight = FontWeight.Bold, fontSize = 12.sp)
