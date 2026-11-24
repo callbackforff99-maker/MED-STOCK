@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -141,8 +142,8 @@ private fun MoreScreen(modifier: Modifier) {
     Text("Developed by ZEROX", fontWeight = FontWeight.Bold, fontSize = 17.sp)
     Text("Connect with the developer", color = Color.Gray, fontSize = 12.sp)
     Spacer(Modifier.height(8.dp))
-    OutlinedButton(onClick = { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Instagram") }
-    OutlinedButton(onClick = { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Facebook, null); Spacer(Modifier.width(8.dp)); Text("Facebook") }
+    OutlinedButton(onClick = { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Link, null); Spacer(Modifier.width(8.dp)); Text("Instagram") }
+    OutlinedButton(onClick = { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Link, null); Spacer(Modifier.width(8.dp)); Text("Facebook") }
    }
   }
   Spacer(Modifier.height(12.dp))
