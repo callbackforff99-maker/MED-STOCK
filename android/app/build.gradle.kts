@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -18,9 +20,9 @@ android {
     }
 
     buildFeatures { compose = true; buildConfig = true }
-    val localProps = java.util.Properties().apply {
+    val localProps = Properties().apply {
         val propsFile = rootProject.file("local.properties")
-        if (propsFile.exists()) propsFile.inputStream().use { load(it) }
+        if (propsFile.exists()) propsFile.inputStream().use { stream -> this.load(stream) }
     }
     val supabaseUrl = localProps.getProperty("SUPABASE_URL") ?: "https://cmzbothdqnltrsfxvniv.supabase.co"
     val supabaseKey = localProps.getProperty("SUPABASE_PUBLISHABLE_KEY") ?: "sb_publishable_tiv6KVccpBYFUStAVvMW_w_sQ-i0KdO"
