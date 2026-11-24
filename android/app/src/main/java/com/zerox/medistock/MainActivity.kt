@@ -59,8 +59,7 @@ class MainActivity : ComponentActivity() {
      onComplete = { owner, shop ->
       prefs.edit().putBoolean("profile_created", true).putString("owner_name", owner).putString("shop_name", shop).apply()
       profileCreated = true
-     },
-     onExplore = { guestSession = true }
+     }
     )
     else MediStockApp(this@MainActivity, dao, darkMode, prefs) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
    }
@@ -90,7 +89,7 @@ private fun GuestWelcome(onExplore: () -> Unit, onCreateAccount: () -> Unit) {
 }
 
 @Composable
-private fun ProfileSetup(onComplete: (String, String) -> Unit, onExplore: () -> Unit) {
+private fun ProfileSetup(onComplete: (String, String) -> Unit) {
  var owner by remember { mutableStateOf("") }
  var shop by remember { mutableStateOf("") }
  Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Center) {
