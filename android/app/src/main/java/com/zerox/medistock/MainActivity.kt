@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
   val prefs = getSharedPreferences("stock_x_settings", MODE_PRIVATE)
   setContent {
    var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
-   val scheme = if (darkMode) darkColorScheme(primary = Green, onPrimary = Color(0xFF002116), secondary = Color(0xFF6DE7B4), background = Bg, onBackground = Color(0xFFF4F7F5), surface = DarkSurface, onSurface = Color(0xFFF4F7F5), surfaceVariant = Color(0xFF202B25), onSurfaceVariant = MutedText, outline = Color(0xFF34443B), error = Crimson) else lightColorScheme(primary = Color(0xFF087A53), onPrimary = Color.White, background = Color(0xFFF3F7F4), onBackground = Color(0xFF14221B), surface = Color.White, onSurface = Color(0xFF14221B), surfaceVariant = Color(0xFFE7EFEA), onSurfaceVariant = Color(0xFF62736A), outline = Color(0xFFD3DED7)
+   val scheme = if (darkMode) darkColorScheme(primary = Green, onPrimary = Color(0xFF002116), secondary = Color(0xFF6DE7B4), background = Bg, onBackground = Color(0xFFF4F7F5), surface = DarkSurface, onSurface = Color(0xFFF4F7F5), surfaceVariant = Color(0xFF202B25), onSurfaceVariant = MutedText, outline = Color(0xFF34443B), error = Crimson) else lightColorScheme(primary = Color(0xFF087A53), onPrimary = Color.White, background = Color(0xFFF3F7F4), onBackground = Color(0xFF14221B), surface = Color.White, onSurface = Color(0xFF14221B), surfaceVariant = Color(0xFFE7EFEA), onSurfaceVariant = Color(0xFF62736A), outline = Color(0xFFD3DED7))
    MaterialTheme(colorScheme = scheme) {
     var showSplash by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) { delay(1800); showSplash = false }
