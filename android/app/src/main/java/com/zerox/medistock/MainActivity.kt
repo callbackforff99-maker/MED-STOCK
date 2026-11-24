@@ -43,9 +43,46 @@ class MainActivity : ComponentActivity() {
    MaterialTheme(colorScheme = scheme) {
     var showSplash by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) { delay(1800); showSplash = false }
-    if (showSplash) StockXSplash() else MediStockApp(dao, darkMode) { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }
+    if (showSplash) StockXSplash() else StockXRoot(dao, darkMode, { enabled -> darkMode = enabled; prefs.edit().putBoolean("dark_mode", enabled).apply() }, prefs)
    }
   }
+ }
+}
+
+@Composable
+private fun StockXRoot(
+ dao: MedicineDao,
+ darkMode: Boolean,
+ onDarkModeChange: (Boolean) -> Unit,
+ prefs: android.content.SharedPreferences
+) {
+ var setupDone by remember { mutableStateOf(prefs.getBoolean("setup_completed", false)) }
+ var busy by remember { mutableStateOf(false) }
+ var message by remember { mutableStateOf<String?>(null) }
+ val scope = rememberCoroutineScope()
+ if (!setupDone) {
+  StockXSetupFlow(
+   onSupabaseRequired = { input ->
+    busy = true
+    scope.launch {
+     val result = SupabaseRepository().createAccountAndShop(input)
+     busy = false
+     message = result.message
+     if (result.success) {
+      prefs.edit().putBoolean("setup_completed", true).apply()
+      setupDone = true
+     }
+    }
+   },
+   onContinueOffline = {
+    prefs.edit().putBoolean("setup_completed", true).putBoolean("offline_mode", true).apply()
+    setupDone = true
+   }
+  )
+  if (busy) AlertDialog(onDismissRequest = {}, title = { Text("Setting up STOCK X") }, text = { Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(); Spacer(Modifier.width(14.dp)); Text("Connecting securely...") } }, confirmButton = {})
+  message?.let { msg -> AlertDialog(onDismissRequest = { message = null }, title = { Text("Account setup") }, text = { Text(msg) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }) }
+ } else {
+  MediStockApp(dao, darkMode, onDarkModeChange)
  }
 }
 
