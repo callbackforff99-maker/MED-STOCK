@@ -1,5 +1,10 @@
 package com.zerox.medistock
 import android.os.Bundle
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -30,7 +35,7 @@ class MainActivity : ComponentActivity() {
  override fun onCreate(savedInstanceState: Bundle?) {
   super.onCreate(savedInstanceState)
   val dao = MedicineDatabase.get(this).dao()
-  setContent { MaterialTheme(colorScheme = lightColorScheme(primary = Green, background = Bg)) { MediStockApp(dao) } }
+  setContent { MaterialTheme(colorScheme = lightColorScheme(primary = Green, background = Bg)) { var showSplash by remember { mutableStateOf(true) }; LaunchedEffect(Unit) { delay(1800); showSplash = false }; if (showSplash) StockXSplash() else MediStockApp(dao) } }
  }
 }
 
@@ -125,10 +130,39 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
 
 @Composable
 private fun MoreScreen(modifier: Modifier) {
+ val uri = LocalUriHandler.current
  Column(modifier.fillMaxSize().padding(20.dp)) {
   Text("More", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-  listOf("Shop profile", "Owner details", "Backup & restore", "Settings", "About MEDI STOCK").forEach { label -> ListItem(headlineContent = { Text(label) }) }
+  listOf("Shop profile", "Owner details", "Backup & restore", "Settings", "About STOCK X").forEach { label -> ListItem(headlineContent = { Text(label) }) }
+  Spacer(Modifier.height(14.dp))
+  Text("CONTACT DEVELOPER", color = Green, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+  Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+   Column(Modifier.padding(12.dp)) {
+    Text("Developed by ZEROX", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+    Text("Connect with the developer", color = Color.Gray, fontSize = 12.sp)
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(onClick = { uri.openUri("https://www.instagram.com/shafin_434?bqrl=MWlzOHk2eWQ0YjVqNA==") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Instagram") }
+    OutlinedButton(onClick = { uri.openUri("https://www.facebook.com/share/1CR39ArkRv/") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Facebook, null); Spacer(Modifier.width(8.dp)); Text("Facebook") }
+   }
+  }
+  Spacer(Modifier.height(12.dp))
   Text("Offline local database • v1.0.0", color = Color.Gray, fontSize = 12.sp)
+ }
+}
+
+@Composable
+private fun StockXSplash() {
+ Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF020806), Color(0xFF001B12), Color(0xFF020403)))), contentAlignment = Alignment.Center) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+   Box(Modifier.size(156.dp).shadow(24.dp, RoundedCornerShape(34.dp)).background(Color(0xFF03150F), RoundedCornerShape(34.dp)), contentAlignment = Alignment.Center) {
+    Icon(Icons.Default.MedicalServices, null, tint = Color(0xFF00F59B), modifier = Modifier.size(82.dp))
+    Text("X", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black, modifier = Modifier.offset(x = 28.dp, y = 25.dp))
+   }
+   Spacer(Modifier.height(22.dp))
+   Text("STOCK X", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
+   Spacer(Modifier.height(7.dp))
+   Text("Developed by ZEROX", color = Color(0xFF00D98A), fontSize = 13.sp, letterSpacing = 1.sp)
+  }
  }
 }
 
