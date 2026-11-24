@@ -38,16 +38,38 @@ class SupabaseRepository {
                 .put("phone", input.ownerPhone)
             request("/rest/v1/owner_profiles", "POST", profile, accessToken, "resolution=merge-duplicates")
 
-            val shop = JSONObject()
-                .put("owner_id", userId)
-                .put("name", input.shopName)
-                .put("phone", input.shopPhone)
-                .put("address", input.shopAddress)
-            request("/rest/v1/shops", "POST", shop, accessToken)
+            // On sign-in, keep existing shops; only create the first shop when none exists.
+            val existingShops = if (input.createAccount) "[]" else
+                requestGet("/rest/v1/shops?select=id&owner_id=eq.$userId", accessToken)
+            if (input.createAccount || existingShops == "[]") {
+                val shop = JSONObject()
+                    .put("owner_id", userId)
+                    .put("name", input.shopName)
+                    .put("phone", input.shopPhone)
+                    .put("address", input.shopAddress)
+                request("/rest/v1/shops", "POST", shop, accessToken)
+            }
             SetupResult(true, "Account and shop created successfully.")
         } catch (e: Exception) {
             SetupResult(false, e.message ?: "Could not connect to Supabase.")
         }
+    }
+
+    private fun requestGet(path: String, token: String): String {
+        val connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 15000
+            readTimeout = 20000
+            setRequestProperty("apikey", apiKey)
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Accept", "application/json")
+        }
+        val code = connection.responseCode
+        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        connection.disconnect()
+        if (code !in 200..299) throw IllegalStateException("Supabase error ($code): $response")
+        return response
     }
 
     private fun request(path: String, method: String, body: JSONObject, token: String?, prefer: String? = null): JSONObject {
