@@ -8,14 +8,23 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MedicineDao {
-    @Query("SELECT * FROM medicines ORDER BY name COLLATE NOCASE")
-    fun observeAll(): Flow<List<MedicineEntity>>
+    @Query("SELECT * FROM shops ORDER BY id ASC")
+    fun observeShops(): Flow<List<ShopEntity>>
 
-    @Query("SELECT * FROM medicines ORDER BY name COLLATE NOCASE")
-    suspend fun getAllForExport(): List<MedicineEntity>
+    @Query("SELECT * FROM shops ORDER BY id ASC")
+    suspend fun getShops(): List<ShopEntity>
 
-    @Query("SELECT * FROM stock_movements ORDER BY occurredAt ASC")
-    suspend fun getAllMovementsForExport(): List<StockMovementEntity>
+    @Insert
+    suspend fun insertShop(shop: ShopEntity): Long
+
+    @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE")
+    fun observeAll(shopId: Long): Flow<List<MedicineEntity>>
+
+    @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE")
+    suspend fun getAllForExport(shopId: Long): List<MedicineEntity>
+
+    @Query("SELECT * FROM stock_movements WHERE shopId=:shopId ORDER BY occurredAt ASC")
+    suspend fun getAllMovementsForExport(shopId: Long): List<StockMovementEntity>
 
     @Insert
     suspend fun insert(item: MedicineEntity)
@@ -32,6 +41,6 @@ interface MedicineDao {
         setQty(item.medicineId, newQty)
     }
 
-    @Query("SELECT * FROM stock_movements WHERE occurredAt >= :fromInclusive AND occurredAt < :toExclusive ORDER BY occurredAt ASC")
-    fun observeMovements(fromInclusive: Long, toExclusive: Long): Flow<List<StockMovementEntity>>
+    @Query("SELECT * FROM stock_movements WHERE shopId=:shopId AND occurredAt >= :fromInclusive AND occurredAt < :toExclusive ORDER BY occurredAt ASC")
+    fun observeMovements(shopId: Long, fromInclusive: Long, toExclusive: Long): Flow<List<StockMovementEntity>>
 }
