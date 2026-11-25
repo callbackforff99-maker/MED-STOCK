@@ -157,23 +157,56 @@ private fun createStockReport(
     stockValue: Double
 ): String {
     val pdf = PdfDocument()
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-    val page = pdf.startPage(pageInfo)
-    val canvas = page.canvas
-    val title = Paint().apply { color = android.graphics.Color.rgb(35, 39, 37); textSize = 23f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
-    val body = Paint().apply { color = android.graphics.Color.rgb(65, 70, 67); textSize = 11f }
-    val accent = Paint().apply { color = android.graphics.Color.rgb(179, 38, 30); strokeWidth = 3f }
-    var y = 54f
-    canvas.drawText("STOCK X", 42f, y, title)
-    canvas.drawText("Developed by ZEROX", 420f, y, body)
-    y += 25
-    canvas.drawLine(42f, y, 553f, y, accent)
-    y += 28
-    canvas.drawText(shop, 42f, y, title.apply { textSize = 18f })
-    y += 20
-    canvas.drawText("Inventory report  |  $start to $end", 42f, y, body)
-    y += 34
-    val rows = listOf(
+    val pageWidth = 595
+    val pageHeight = 842
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(35, 39, 37)
+        textSize = 22f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(65, 70, 67)
+        textSize = 10.5f
+    }
+    val boldPaint = Paint(bodyPaint).apply { typeface = Typeface.DEFAULT_BOLD }
+    val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.rgb(0, 150, 95)
+        strokeWidth = 2.5f
+    }
+    var pageNumber = 0
+    var page = pdf.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNumber).create())
+    var canvas = page.canvas
+    var y = 0f
+
+    fun drawFooter() {
+        canvas.drawLine(42f, 812f, 553f, 812f, accentPaint)
+        canvas.drawText("STOCK X  •  ZEROX", 42f, 829f, bodyPaint)
+        canvas.drawText("Page $pageNumber", 495f, 829f, bodyPaint)
+    }
+
+    fun drawPageHeader(continued: Boolean) {
+        y = 50f
+        canvas.drawText("STOCK X", 42f, y, titlePaint)
+        canvas.drawText("Developed by ZEROX", 420f, y, bodyPaint)
+        y += 22f
+        canvas.drawLine(42f, y, 553f, y, accentPaint)
+        y += 27f
+        if (continued) {
+            canvas.drawText("PRODUCT INVENTORY (CONTINUED)", 42f, y, boldPaint)
+            y += 24f
+            canvas.drawText("Medicine", 42f, y, boldPaint)
+            canvas.drawText("Qty", 365f, y, boldPaint)
+            canvas.drawText("Stock value", 430f, y, boldPaint)
+            y += 18f
+        }
+    }
+
+    drawPageHeader(false)
+    canvas.drawText(shop.take(54), 42f, y, titlePaint.apply { textSize = 18f })
+    y += 21f
+    canvas.drawText("Inventory report  |  $start to $end", 42f, y, bodyPaint)
+    y += 31f
+    val summaryRows = listOf(
         "Sales revenue" to "৳${money(sales)}",
         "Stock purchase cost" to "৳${money(purchases)}",
         "Current stock value" to "৳${money(stockValue)}",
@@ -181,31 +214,48 @@ private fun createStockReport(
         "Stock IN units" to movements.filter { it.movementType == "IN" }.sumOf { it.quantity }.toString(),
         "Stock OUT units" to movements.filter { it.movementType == "OUT" }.sumOf { it.quantity }.toString()
     )
-    rows.forEach { (label, value) ->
-        canvas.drawText(label, 48f, y, body)
-        canvas.drawText(value, 390f, y, body)
-        y += 22
+    summaryRows.forEach { (label, value) ->
+        canvas.drawText(label, 48f, y, bodyPaint)
+        canvas.drawText(value, 390f, y, bodyPaint)
+        y += 19f
     }
-    y += 12
-    canvas.drawText("PRODUCT INVENTORY", 42f, y, title.apply { textSize = 13f })
-    y += 22
-    canvas.drawText("Medicine", 42f, y, body.apply { typeface = Typeface.DEFAULT_BOLD })
-    canvas.drawText("Qty", 365f, y, body)
-    canvas.drawText("Stock value", 430f, y, body)
-    y += 17
+    y += 10f
+    canvas.drawText("PRODUCT INVENTORY", 42f, y, boldPaint)
+    y += 23f
+    canvas.drawText("Medicine", 42f, y, boldPaint)
+    canvas.drawText("Qty", 365f, y, boldPaint)
+    canvas.drawText("Stock value", 430f, y, boldPaint)
+    y += 18f
+
     medicines.forEach { med ->
-        if (y > 790f) return@forEach
-        canvas.drawText(med.name.take(42), 42f, y, body.apply { typeface = Typeface.DEFAULT })
-        canvas.drawText(med.quantity.toString(), 365f, y, body)
-        canvas.drawText("৳${money(med.quantity * med.unitPrice)}", 430f, y, body)
-        y += 18
+        if (y > 785f) {
+            drawFooter()
+            pdf.finishPage(page)
+            page = pdf.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNumber).create())
+            canvas = page.canvas
+            drawPageHeader(true)
+        }
+        canvas.drawText(med.name.take(42), 42f, y, bodyPaint)
+        canvas.drawText(med.quantity.toString(), 365f, y, bodyPaint)
+        canvas.drawText("৳${money(med.quantity * med.unitPrice)}", 430f, y, bodyPaint)
+        y += 18f
+    }
+    if (medicines.isEmpty()) {
+        canvas.drawText("No medicines are currently registered.", 42f, y, bodyPaint)
+        y += 18f
     }
     if (movements.isEmpty()) {
-        y += 12
-        canvas.drawText("Note: No historical stock movements were recorded for this period.", 42f, y, body)
+        if (y > 780f) {
+            drawFooter()
+            pdf.finishPage(page)
+            page = pdf.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNumber).create())
+            canvas = page.canvas
+            drawPageHeader(true)
+        }
+        y += 10f
+        canvas.drawText("Note: No historical stock movements were recorded for this period.", 42f, y, bodyPaint)
     }
-    canvas.drawLine(42f, 812f, 553f, 812f, accent)
-    canvas.drawText("STOCK X  •  ZEROX", 42f, 829f, body)
+    drawFooter()
     pdf.finishPage(page)
 
     return try {
@@ -213,12 +263,13 @@ private fun createStockReport(
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
             put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put(MediaStore.MediaColumns.RELATIVE_PATH, "Download")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Download")
         }
         val resolver = context.contentResolver
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             ?: throw IllegalStateException("Could not create PDF file")
-        resolver.openOutputStream(uri)?.use { pdf.writeTo(it) } ?: throw IllegalStateException("Could not write PDF")
+        resolver.openOutputStream(uri)?.use { pdf.writeTo(it) }
+            ?: throw IllegalStateException("Could not write PDF")
         "PDF saved to Downloads/$filename"
     } catch (e: Exception) {
         "PDF download failed: ${e.message ?: "Unknown error"}"
