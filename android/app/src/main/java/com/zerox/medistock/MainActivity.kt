@@ -70,43 +70,50 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun GuestWelcome(onExplore: () -> Unit, onCreateAccount: () -> Unit) {
  Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), contentAlignment = Alignment.Center) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-   Box(Modifier.size(104.dp).background(Color(0xFF10271D), RoundedCornerShape(32.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Inventory2, null, tint = Green, modifier = Modifier.size(54.dp)) }
+  Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(17.dp)) {
+   Box(Modifier.size(112.dp).background(Brush.linearGradient(listOf(Color(0xFF123D2B), Color(0xFF071A12))), RoundedCornerShape(34.dp)), contentAlignment = Alignment.Center) {
+    Icon(Icons.Default.Inventory2, null, tint = Color(0xFF00E69A), modifier = Modifier.size(57.dp))
+   }
    Text("STOCK X", color = Green, fontSize = 31.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
-   Text("Your shop. In control.", color = MaterialTheme.colorScheme.onBackground, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-   Text("Explore inventory, stock movement and reports before creating your profile.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Explore, null, tint = Green); Spacer(Modifier.width(10.dp)); Text("Guest preview", fontWeight = FontWeight.Bold) }
-     Text("No sign-up needed to take a look around. Your locally entered demo data stays on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-     Button(onClick = onExplore, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) { Icon(Icons.Default.ArrowForward, null); Spacer(Modifier.width(8.dp)); Text("Explore as guest") }
-     TextButton(onClick = onCreateAccount, modifier = Modifier.fillMaxWidth()) { Text("I want to create my profile") }
+   Text("Your shop. In control.", color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+   Text("Manage medicine inventory, track stock movement and review shop reports — all in one place.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 13.sp)
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(25.dp), modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+     Row(verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.size(38.dp).background(Green.copy(alpha = .13f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Explore, null, tint = Green) }
+      Spacer(Modifier.width(10.dp))
+      Column {
+       Text("Guest preview", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+       Text("Take a look before creating a profile", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+      }
+     }
+     Text("No sign-up needed to explore. Demo entries stay on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+     Button(onClick = onExplore, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Explore as guest", fontWeight = FontWeight.Bold) }
+     OutlinedButton(onClick = onCreateAccount, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Green)) { Text("Create account") }
     }
    }
-   Text("DEVELOPED BY ZEROX", color = MutedText, fontSize = 11.sp, letterSpacing = 2.sp)
+   Text("DEVELOPED BY ZEROX", color = MutedText, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
   }
  }
 }
-
 @Composable
 private fun ProfileSetup(onComplete: (String, String) -> Unit) {
  var owner by remember { mutableStateOf("") }
  var shop by remember { mutableStateOf("") }
  Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp), verticalArrangement = Arrangement.Center) {
-  Box(Modifier.size(66.dp).background(Color(0xFF10271D), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAddAlt1, null, tint = Green, modifier = Modifier.size(32.dp)) }
+  Box(Modifier.size(68.dp).background(Green.copy(alpha = .13f), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAddAlt1, null, tint = Green, modifier = Modifier.size(32.dp)) }
   Spacer(Modifier.height(22.dp))
-  Text("Welcome back.", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-  Text("Create your profile to continue using STOCK X.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+  Text("Set up your shop", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
+  Text("A few details to personalize your STOCK X workspace.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
   Spacer(Modifier.height(24.dp))
-  OutlinedTextField(owner, { owner = it }, Modifier.fillMaxWidth(), label = { Text("Owner name") }, leadingIcon = { Icon(Icons.Default.Person, null) }, singleLine = true, shape = RoundedCornerShape(16.dp))
+  OutlinedTextField(owner, { owner = it }, Modifier.fillMaxWidth(), label = { Text("Owner name") }, leadingIcon = { Icon(Icons.Default.Person, null, tint = Green) }, singleLine = true, shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   Spacer(Modifier.height(12.dp))
-  OutlinedTextField(shop, { shop = it }, Modifier.fillMaxWidth(), label = { Text("Shop name") }, leadingIcon = { Icon(Icons.Default.Store, null) }, singleLine = true, shape = RoundedCornerShape(16.dp))
+  OutlinedTextField(shop, { shop = it }, Modifier.fillMaxWidth(), label = { Text("Shop name") }, leadingIcon = { Icon(Icons.Default.Store, null, tint = Green) }, singleLine = true, shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   Spacer(Modifier.height(18.dp))
-  Button(onClick = { onComplete(owner.trim(), shop.trim()) }, enabled = owner.isNotBlank() && shop.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) { Text("Create profile & continue") }
+  Button(onClick = { onComplete(owner.trim(), shop.trim()) }, enabled = owner.isNotBlank() && shop.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Create profile & continue", fontWeight = FontWeight.Bold) }
   Text("Your guest inventory remains saved on this device.", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
  }
 }
-
 @Composable
 private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, prefs: android.content.SharedPreferences, onDarkModeChange: (Boolean) -> Unit) {
  val medicines by dao.observeAll().collectAsState(initial = emptyList())
@@ -477,20 +484,19 @@ private fun DeveloperLink(label: String, icon: androidx.compose.ui.graphics.vect
 
 @Composable
 private fun StockXSplash() {
- Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF020806), Color(0xFF001B12), Color(0xFF020403)))), contentAlignment = Alignment.Center) {
+ Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF020806), Color(0xFF09251A), Color(0xFF020403)))), contentAlignment = Alignment.Center) {
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
-   Box(Modifier.size(156.dp).shadow(24.dp, RoundedCornerShape(34.dp)).background(Color(0xFF03150F), RoundedCornerShape(34.dp)), contentAlignment = Alignment.Center) {
+   Box(Modifier.size(156.dp).shadow(25.dp, RoundedCornerShape(38.dp)).background(Brush.linearGradient(listOf(Color(0xFF123D2B), Color(0xFF04140D))), RoundedCornerShape(38.dp)), contentAlignment = Alignment.Center) {
     Icon(Icons.Default.MedicalServices, null, tint = Color(0xFF00F59B), modifier = Modifier.size(82.dp))
     Text("X", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black, modifier = Modifier.offset(x = 28.dp, y = 25.dp))
    }
    Spacer(Modifier.height(22.dp))
-   Text("STOCK X", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
+   Text("STOCK X", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp)
    Spacer(Modifier.height(7.dp))
-   Text("Developed by ZEROX", color = Color(0xFF00D98A), fontSize = 13.sp, letterSpacing = 1.sp)
+   Text("Developed by ZEROX", color = Color(0xFF00D98A), fontSize = 12.sp, letterSpacing = 1.2.sp)
   }
  }
 }
-
 @Composable
 private fun AddMedicineDialog(close: () -> Unit, save: (String, String, String, Double, Int, Int) -> Unit) {
  var name by remember { mutableStateOf("") }
@@ -499,27 +505,35 @@ private fun AddMedicineDialog(close: () -> Unit, save: (String, String, String, 
  var price by remember { mutableStateOf("0") }
  var qty by remember { mutableStateOf("0") }
  var min by remember { mutableStateOf("10") }
- AlertDialog(onDismissRequest = close, title = { Text("Add medicine") }, text = {
-  Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-   OutlinedTextField(name, { name = it }, label = { Text("Medicine name *") }, singleLine = true)
-   OutlinedTextField(strength, { strength = it }, label = { Text("Strength") }, singleLine = true)
-   OutlinedTextField(company, { company = it }, label = { Text("Company") }, singleLine = true)
-   OutlinedTextField(price, { price = it }, label = { Text("Unit price (৳)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-   OutlinedTextField(qty, { qty = it }, label = { Text("Opening quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-   OutlinedTextField(min, { min = it }, label = { Text("Low-stock threshold") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+ AlertDialog(onDismissRequest = close, shape = RoundedCornerShape(26.dp), containerColor = MaterialTheme.colorScheme.surface, title = { Text("Add medicine", fontWeight = FontWeight.Bold) }, text = {
+  Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+   Text("Enter product details and opening stock.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+   OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Medicine name *") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(strength, { strength = it }, Modifier.fillMaxWidth(), label = { Text("Strength") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(company, { company = it }, Modifier.fillMaxWidth(), label = { Text("Company") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(price, { price = it }, Modifier.fillMaxWidth(), label = { Text("Unit price (৳)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(qty, { qty = it }, Modifier.fillMaxWidth(), label = { Text("Opening quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(min, { min = it }, Modifier.fillMaxWidth(), label = { Text("Low-stock threshold") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   }
- }, confirmButton = { Button(enabled = name.isNotBlank(), onClick = { save(name.trim(), strength.trim(), company.trim(), price.toDoubleOrNull() ?: 0.0, qty.toIntOrNull()?.coerceAtLeast(0) ?: 0, min.toIntOrNull()?.coerceAtLeast(0) ?: 10) }) { Text("Save") } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
+ }, confirmButton = { Button(enabled = name.isNotBlank(), onClick = { save(name.trim(), strength.trim(), company.trim(), price.toDoubleOrNull() ?: 0.0, qty.toIntOrNull()?.coerceAtLeast(0) ?: 0, min.toIntOrNull()?.coerceAtLeast(0) ?: 10) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Save medicine", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
 }
-
 @Composable
 private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, confirm: (Int) -> Unit) {
  var amount by remember { mutableStateOf("1") }
  val number = amount.toIntOrNull() ?: 0
- AlertDialog(onDismissRequest = close, title = { Text(if (mode == "IN") "Stock in" else "Stock out") }, text = {
-  Column { Text(item.name, fontWeight = FontWeight.Bold); Text("Available: " + item.quantity, color = Color.Gray); OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, label = { Text("Quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)); if (mode == "OUT" && number > item.quantity) Text("Insufficient stock", color = Color.Red) }
- }, confirmButton = { Button(enabled = number > 0 && (mode == "IN" || number <= item.quantity), onClick = { confirm(number) }) { Text("Confirm") } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
+ val isIn = mode == "IN"
+ AlertDialog(onDismissRequest = close, shape = RoundedCornerShape(26.dp), containerColor = MaterialTheme.colorScheme.surface, title = { Text(if (isIn) "Stock in" else "Stock out", fontWeight = FontWeight.Bold) }, text = {
+  Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+   Text(item.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) { Text("Available: \${item.quantity}", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+    Surface(color = if (isIn) Color(0xFF123426) else Color(0xFF38251D), shape = RoundedCornerShape(12.dp)) { Text(if (isIn) "STOCK IN" else "STOCK OUT", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = if (isIn) Color(0xFF63E6AC) else Color(0xFFFFB18B), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+   }
+   OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   if (!isIn && number > item.quantity) Text("Insufficient stock", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+  }
+ }, confirmButton = { Button(enabled = number > 0 && (isIn || number <= item.quantity), onClick = { confirm(number) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Confirm movement", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
 }
-
 @Composable
 private fun StatCard(title: String, value: String, modifier: Modifier) {
  Card(modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(17.dp)) { Column(Modifier.padding(15.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp); Text(value, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold) } }
