@@ -8,6 +8,8 @@ import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.provider.MediaStore
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,19 +59,19 @@ internal fun MonthlyReportScreen(
     val unsoldUnits = medicines.sumOf { it.quantity }
     val unsoldValue = stockValue
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 18.dp, vertical = 12.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Text("Month-end report", style = MaterialTheme.typography.headlineSmall)
+            Text("Month-end report", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             item {
-                OutlinedTextField(shopName, { shopName = it }, Modifier.fillMaxWidth(), label = { Text("Shop name") }, singleLine = true)
+                OutlinedTextField(shopName, { shopName = it }, Modifier.fillMaxWidth(), label = { Text("Shop name") }, singleLine = true, shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF00D98B), cursorColor = Color(0xFF00D98B)))
             }
             item {
-                OutlinedTextField(startText, { startText = it }, Modifier.fillMaxWidth(), label = { Text("From date (YYYY-MM-DD)") }, singleLine = true)
+                OutlinedTextField(startText, { startText = it }, Modifier.fillMaxWidth(), label = { Text("From date (YYYY-MM-DD)") }, singleLine = true, shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF00D98B), cursorColor = Color(0xFF00D98B)))
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(endText, { endText = it }, Modifier.fillMaxWidth(), label = { Text("To date (YYYY-MM-DD)") }, singleLine = true)
+                OutlinedTextField(endText, { endText = it }, Modifier.fillMaxWidth(), label = { Text("To date (YYYY-MM-DD)") }, singleLine = true, shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF00D98B), cursorColor = Color(0xFF00D98B)))
                 Text("Choose a month or enter a custom date range.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { startText = today.withDayOfMonth(1).toString(); endText = today.toString() }) { Text("This month") }
@@ -81,9 +83,9 @@ internal fun MonthlyReportScreen(
                 }
             }
             item {
-                Card {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("REPORT SUMMARY", color = Color(0xFFB3261E), style = MaterialTheme.typography.labelLarge)
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(22.dp)) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("REPORT SUMMARY", color = Color(0xFF00D98B), style = MaterialTheme.typography.labelLarge)
                         Text("Sales revenue: ৳" + money(salesTotal))
                         Text("Stock purchase cost: ৳" + money(purchaseTotal))
                         Text("Current stock value: ৳" + money(stockValue))
@@ -105,8 +107,8 @@ internal fun MonthlyReportScreen(
                         status = ""
                     },
                     enabled = valid && shopName.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Preview report") }
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00D98B), contentColor = Color(0xFF062016))
+                ) { Text("Preview report", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
                 if (!valid) Text("Enter a valid date range.", color = MaterialTheme.colorScheme.error)
                 if (status.isNotBlank()) Text(status, color = MaterialTheme.colorScheme.primary)
             }
@@ -134,9 +136,9 @@ internal fun MonthlyReportScreen(
                 Button(onClick = {
                     status = createStockReport(context, shopName, startText, endText, medicines, movements, salesTotal, purchaseTotal, stockValue)
                     preview = false
-                }) { Text("Download PDF") }
+                }, shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00D98B), contentColor = Color(0xFF062016))) { Text("Download PDF") }
             },
-            dismissButton = { TextButton(onClick = { preview = false }) { Text("Close") } }
+            dismissButton = { TextButton(onClick = { preview = false }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) { Text("Close") } }
         )
     }
 }
