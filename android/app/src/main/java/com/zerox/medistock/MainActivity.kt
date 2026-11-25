@@ -321,43 +321,90 @@ private fun DashboardAction(label: String, detail: String, icon: androidx.compos
 @Composable
 private fun InventoryScreen(data: List<MedicineEntity>, search: String, onSearch: (String) -> Unit, modifier: Modifier, onStock: (MedicineEntity, String) -> Unit) {
  val filtered = data.filter { it.name.contains(search, true) || it.company.contains(search, true) || it.strength.contains(search, true) }
- Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-  Text("Inventory", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 22.dp, bottom = 12.dp))
-  OutlinedTextField(search, onSearch, Modifier.fillMaxWidth(), placeholder = { Text("Search medicines") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true, shape = RoundedCornerShape(14.dp))
-  Spacer(Modifier.height(12.dp))
-  if (filtered.isEmpty()) EmptyCard("No medicines found", "Tap + to add your first medicine.")
-  else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) { items(filtered, key = { it.id }) { medicine -> MedicineCard(medicine, onStock) } }
+ Column(modifier.fillMaxSize().padding(horizontal = 18.dp)) {
+  Text("Inventory", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 22.dp))
+  Text("\${data.size} medicines in your shop", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp, bottom = 16.dp))
+  OutlinedTextField(search, onSearch, Modifier.fillMaxWidth(), placeholder = { Text("Search name, company or strength") }, leadingIcon = { Icon(Icons.Default.Search, null, tint = Green) }, singleLine = true, shape = RoundedCornerShape(17.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+  Spacer(Modifier.height(14.dp))
+  Row(verticalAlignment = Alignment.CenterVertically) {
+   Text("Medicine list", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+   Text("\${filtered.size} results", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+  }
+  Spacer(Modifier.height(10.dp))
+  if (filtered.isEmpty()) EmptyCard("No medicines found", "Try another search or add your first medicine.")
+  else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 18.dp)) { items(filtered, key = { it.id }) { medicine -> MedicineCard(medicine, onStock) } }
  }
 }
-
 @Composable
 private fun MedicineCard(item: MedicineEntity, onStock: (MedicineEntity, String) -> Unit) {
- Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(17.dp), modifier = Modifier.fillMaxWidth()) {
-  Column(Modifier.padding(14.dp)) {
+ val low = item.quantity <= item.minimumStock
+ Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(21.dp), modifier = Modifier.fillMaxWidth()) {
+  Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
    Row(verticalAlignment = Alignment.CenterVertically) {
-    Column(Modifier.weight(1f)) { Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp); Text(listOf(item.strength, item.company).filter { it.isNotBlank() }.joinToString(" • "), color = Color.Gray, fontSize = 12.sp) }
-    Text(if (item.quantity <= item.minimumStock) "LOW STOCK" else "IN STOCK", color = if (item.quantity <= item.minimumStock) Color(0xFFB45A19) else Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    Box(Modifier.size(43.dp).background(Green.copy(alpha = .12f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+     Icon(Icons.Default.Medication, null, tint = Green, modifier = Modifier.size(23.dp))
+    }
+    Spacer(Modifier.width(11.dp))
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+     Text(item.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+     Text(listOf(item.strength, item.company).filter { it.isNotBlank() }.joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+    }
+    Surface(color = if (low) Color(0xFF3B2A1B) else Color(0xFF123426), shape = RoundedCornerShape(30.dp)) {
+     Text(if (low) "LOW STOCK" else "IN STOCK", color = if (low) Color(0xFFFFC078) else Color(0xFF63E6AC), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
+    }
    }
-   Spacer(Modifier.height(10.dp))
-   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-    Column { Text("Qty: " + item.quantity, fontWeight = FontWeight.SemiBold); Text("৳" + String.format(Locale.US, "%.2f", item.unitPrice) + " / unit", color = Color.Gray, fontSize = 12.sp) }
-    Row { OutlinedButton(onClick = { onStock(item, "OUT") }) { Text("OUT") }; Spacer(Modifier.width(5.dp)); Button(onClick = { onStock(item, "IN") }) { Text("IN") } }
+   Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = .35f)))
+   Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+     Text("QUANTITY", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+     Text(item.quantity.toString(), color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+     Text("৳" + String.format(Locale.US, "%.2f", item.unitPrice) + " / unit", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+    }
+    OutlinedButton(onClick = { onStock(item, "OUT") }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) { Icon(Icons.Default.Remove, null, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(3.dp)); Text("OUT") }
+    Spacer(Modifier.width(7.dp))
+    Button(onClick = { onStock(item, "IN") }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Icon(Icons.Default.Add, null, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(3.dp)); Text("IN") }
    }
   }
  }
 }
-
 @Composable
 private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
- Column(modifier.fillMaxSize().padding(18.dp)) {
-  Text("Purchase shortlist", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-  Text("Medicines at or below minimum stock", color = Color.Gray)
+ Column(modifier.fillMaxSize().padding(horizontal = 18.dp)) {
+  Text("Purchase shortlist", color = MaterialTheme.colorScheme.onBackground, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 22.dp))
+  Text("Items that need to be reordered", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp, bottom = 16.dp))
+  Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF102B1F)), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+   Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Icon(Icons.Default.ShoppingCart, null, tint = Green, modifier = Modifier.size(25.dp))
+    Spacer(Modifier.width(12.dp))
+    Column {
+     Text("\${items.size} items to purchase", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+     Text("Based on your minimum stock level", color = Color(0xFF9EB8A9), fontSize = 11.sp)
+    }
+   }
+  }
   Spacer(Modifier.height(14.dp))
   if (items.isEmpty()) EmptyCard("All stocked up", "No medicines currently need reordering.")
-  else LazyColumn { items(items, key = { it.id }) { m -> Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) { ListItem(headlineContent = { Text(m.name, fontWeight = FontWeight.Bold) }, supportingContent = { Text(m.company) }, trailingContent = { Text(m.quantity.toString() + " left", color = Color(0xFFB45A19)) }) } } }
+  else LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
+   items(items, key = { it.id }) { m ->
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(19.dp), modifier = Modifier.fillMaxWidth()) {
+     Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.size(42.dp).background(Color(0xFF382919), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.ShoppingBasket, null, tint = Color(0xFFFFC078)) }
+      Spacer(Modifier.width(11.dp))
+      Column(Modifier.weight(1f)) {
+       Text(m.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+       Text(m.company.ifBlank { m.strength }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+       Text("Minimum: \${m.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+      }
+      Column(horizontalAlignment = Alignment.End) {
+       Text("\${m.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+       Text("Reorder", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+      }
+     }
+    }
+   }
+  }
  }
 }
-
 @Composable
 private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
  val uri = LocalUriHandler.current
