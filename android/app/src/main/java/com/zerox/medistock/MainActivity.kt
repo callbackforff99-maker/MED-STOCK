@@ -167,6 +167,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
  }
  selected?.let { item -> StockDialog(item, mode, { selected = null }) { amount ->
   val updated = if (mode == "IN") item.quantity + amount else item.quantity - amount
+  if (amount <= 0 || updated < 0) return@StockDialog
   scope.launch {
    dao.saveMovementAndQty(
     StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.unitPrice, totalAmount = amount * item.unitPrice),
@@ -186,7 +187,7 @@ private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory
   item {
    Row(verticalAlignment = Alignment.CenterVertically) {
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-     Text("GOOD DAY, \${ownerName.uppercase()}", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.7.sp)
+     Text("GOOD DAY, ${ownerName.uppercase()}", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.7.sp)
      Text("Your dashboard", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
      Text("Here’s what’s happening in your shop.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
     }
@@ -285,8 +286,8 @@ private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory
          Text(item.company.ifBlank { item.strength }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
         Column(horizontalAlignment = Alignment.End) {
-         Text("\${item.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-         Text("Min \${item.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+         Text("${item.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+         Text("Min ${item.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
         }
        }
       }
@@ -330,12 +331,12 @@ private fun InventoryScreen(data: List<MedicineEntity>, search: String, onSearch
  val filtered = data.filter { it.name.contains(search, true) || it.company.contains(search, true) || it.strength.contains(search, true) }
  Column(modifier.fillMaxSize().padding(horizontal = 18.dp)) {
   Text("Inventory", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 22.dp))
-  Text("\${data.size} medicines in your shop", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp, bottom = 16.dp))
+  Text("${data.size} medicines in your shop", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp, bottom = 16.dp))
   OutlinedTextField(search, onSearch, Modifier.fillMaxWidth(), placeholder = { Text("Search name, company or strength") }, leadingIcon = { Icon(Icons.Default.Search, null, tint = Green) }, singleLine = true, shape = RoundedCornerShape(17.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   Spacer(Modifier.height(14.dp))
   Row(verticalAlignment = Alignment.CenterVertically) {
    Text("Medicine list", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
-   Text("\${filtered.size} results", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+   Text("${filtered.size} results", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
   }
   Spacer(Modifier.height(10.dp))
   if (filtered.isEmpty()) EmptyCard("No medicines found", "Try another search or add your first medicine.")
@@ -384,7 +385,7 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
     Icon(Icons.Default.ShoppingCart, null, tint = Green, modifier = Modifier.size(25.dp))
     Spacer(Modifier.width(12.dp))
     Column {
-     Text("\${items.size} items to purchase", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+     Text("${items.size} items to purchase", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
      Text("Based on your minimum stock level", color = Color(0xFF9EB8A9), fontSize = 11.sp)
     }
    }
@@ -400,10 +401,10 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
       Column(Modifier.weight(1f)) {
        Text(m.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
        Text(m.company.ifBlank { m.strength }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-       Text("Minimum: \${m.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+       Text("Minimum: ${m.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
       }
       Column(horizontalAlignment = Alignment.End) {
-       Text("\${m.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+       Text("${m.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
        Text("Reorder", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
       }
      }
@@ -515,7 +516,7 @@ private fun AddMedicineDialog(close: () -> Unit, save: (String, String, String, 
    OutlinedTextField(qty, { qty = it }, Modifier.fillMaxWidth(), label = { Text("Opening quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
    OutlinedTextField(min, { min = it }, Modifier.fillMaxWidth(), label = { Text("Low-stock threshold") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   }
- }, confirmButton = { Button(enabled = name.isNotBlank(), onClick = { save(name.trim(), strength.trim(), company.trim(), price.toDoubleOrNull() ?: 0.0, qty.toIntOrNull()?.coerceAtLeast(0) ?: 0, min.toIntOrNull()?.coerceAtLeast(0) ?: 10) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Save medicine", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
+ }, confirmButton = { Button(enabled = name.isNotBlank() && (price.toDoubleOrNull() ?: -1.0) >= 0 && (qty.toIntOrNull() ?: -1) >= 0 && (min.toIntOrNull() ?: -1) >= 0, onClick = { save(name.trim(), strength.trim(), company.trim(), price.toDoubleOrNull() ?: 0.0, qty.toIntOrNull() ?: 0, min.toIntOrNull() ?: 10) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Save medicine", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
 }
 @Composable
 private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, confirm: (Int) -> Unit) {
@@ -526,7 +527,7 @@ private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, c
   Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
    Text(item.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) { Text("Available: \${item.quantity}", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) { Text("Available: ${item.quantity}", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
     Surface(color = if (isIn) Color(0xFF123426) else Color(0xFF38251D), shape = RoundedCornerShape(12.dp)) { Text(if (isIn) "STOCK IN" else "STOCK OUT", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = if (isIn) Color(0xFF63E6AC) else Color(0xFFFFB18B), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
    }
    OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
