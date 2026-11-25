@@ -408,44 +408,50 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
 @Composable
 private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
  val uri = LocalUriHandler.current
- LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-  item { Text("Settings", fontSize = 27.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 22.dp), color = MaterialTheme.colorScheme.onBackground) }
+ LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), contentPadding = PaddingValues(top = 22.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
   item {
-   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
-    Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
-     Box(Modifier.size(54.dp).background(Color(0xFF123A29), RoundedCornerShape(19.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Store, null, tint = Green, modifier = Modifier.size(27.dp)) }
+   Text("Settings", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+   Text("Manage your shop and app preferences", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+  }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(Modifier.background(Brush.linearGradient(listOf(Color(0xFF0C5C3D), Color(0xFF10231A)))).padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+     Box(Modifier.size(54.dp).background(Color.White.copy(alpha = .12f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Store, null, tint = Color(0xFF63E6AC), modifier = Modifier.size(27.dp)) }
      Spacer(Modifier.width(13.dp))
-     Column(Modifier.weight(1f)) { Text(shopName, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Owner: $ownerName", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
-     Icon(Icons.Default.Verified, null, tint = Green)
+     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+      Text(shopName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+      Text("Owner: $ownerName", color = Color.White.copy(alpha = .7f), fontSize = 12.sp)
+     }
+     Icon(Icons.Default.Verified, null, tint = Color(0xFF63E6AC))
     }
    }
   }
-  item { Text("PREFERENCES", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) }
+  item { Text("PREFERENCES", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
   item {
    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
-    ListItem(leadingContent = { Icon(Icons.Default.DarkMode, null, tint = Green) }, headlineContent = { Text("Dark mode", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text(if (darkMode) "ZEROX Midnight is active" else "Switch to ZEROX Midnight") }, trailingContent = { Switch(checked = darkMode, onCheckedChange = onDarkModeChange) })
+    ListItem(leadingContent = { Icon(Icons.Default.DarkMode, null, tint = Green) }, headlineContent = { Text("Dark mode", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text(if (darkMode) "Obsidian Emerald is active" else "Switch to Obsidian Emerald") }, trailingContent = { Switch(checked = darkMode, onCheckedChange = onDarkModeChange, colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF062016), checkedTrackColor = Green)) })
    }
   }
   item {
    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onReports)) {
-    ListItem(leadingContent = { Icon(Icons.Default.PictureAsPdf, null, tint = Green) }, headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Sales, purchases and remaining stock PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null) })
+    ListItem(leadingContent = { Box(Modifier.size(40.dp).background(Green.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PictureAsPdf, null, tint = Green) } }, headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Date range, sales and stock summary PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) })
    }
   }
-  item { Text("DEVELOPER", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) }
+  item { Text("DEVELOPER", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
   item {
-   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth()) {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
     Column(Modifier.padding(18.dp)) {
      Row(verticalAlignment = Alignment.CenterVertically) {
-      Box(Modifier.size(62.dp).background(Brush.linearGradient(listOf(Color(0xFF00D98B), Color(0xFF075B3D))), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Text("S", color = Color(0xFF04130C), fontSize = 30.sp, fontWeight = FontWeight.Black) }
-      Spacer(Modifier.width(14.dp))
+      Box(Modifier.size(58.dp).background(Brush.linearGradient(listOf(Color(0xFF00D98B), Color(0xFF075B3D))), RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) { Text("S", color = Color(0xFF04130C), fontSize = 29.sp, fontWeight = FontWeight.Black) }
+      Spacer(Modifier.width(13.dp))
       Column(Modifier.weight(1f)) {
-       Text("SHAFIN", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
-       Text("DEVELOPED BY ZEROX", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+       Text("SHAFIN", color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
+       Text("DEVELOPED BY ZEROX", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
        Text("App Developer", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
       }
       Icon(Icons.Default.Verified, null, tint = Green)
      }
-     Spacer(Modifier.height(17.dp))
+     Spacer(Modifier.height(16.dp))
      Text("CONNECT WITH ME", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
      Spacer(Modifier.height(9.dp))
      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -455,10 +461,9 @@ private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: 
     }
    }
   }
-  item { Text("ZEROX • STOCK X 1.0.0", color = MutedText, fontSize = 11.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+  item { Text("STOCK X  •  ZEROX", color = MutedText, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
  }
 }
-
 @Composable
 private fun DeveloperLink(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
  Card(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
