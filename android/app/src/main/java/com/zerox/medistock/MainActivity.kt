@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.activity.ComponentActivity
@@ -497,16 +498,33 @@ private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, d
      Button(onClick = {
       scope.launch {
        runCatching {
-        val meds = dao.getAllForExport(activeShopId)
-        val moves = dao.getAllMovementsForExport(activeShopId)
-        JSONObject().put("formatVersion", 1).put("exportedAt", System.currentTimeMillis())
-         .put("medicines", JSONArray().apply { meds.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("strength", it.strength).put("company", it.company).put("unitPrice", it.unitPrice).put("quantity", it.quantity).put("minimumStock", it.minimumStock)) } })
-         .put("stockMovements", JSONArray().apply { moves.forEach { put(JSONObject().put("id", it.id).put("medicineId", it.medicineId).put("medicineName", it.medicineName).put("type", it.movementType).put("quantity", it.quantity).put("unitPrice", it.unitPrice).put("totalAmount", it.totalAmount).put("occurredAt", it.occurredAt)) } }).toString(2)
-       }.onSuccess { exportText = it; jsonExport.launch("STOCK-X-Backup.json") }
-        .onFailure { Toast.makeText(context, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
+        val meds = dao.getAllMedicinesForBackup()
+        val moves = dao.getAllMovementsForBackup()
+        val allShops = dao.getShops()
+        JSONObject().put("formatVersion", 2).put("app", "STOCK X").put("exportedAt", System.currentTimeMillis())
+         .put("shops", JSONArray().apply { allShops.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("ownerName", it.ownerName).put("createdAt", it.createdAt)) } })
+         .put("medicines", JSONArray().apply { meds.forEach { put(JSONObject().put("id", it.id).put("shopId", it.shopId).put("name", it.name).put("strength", it.strength).put("company", it.company).put("unitPrice", it.unitPrice).put("quantity", it.quantity).put("minimumStock", it.minimumStock)) } })
+         .put("stockMovements", JSONArray().apply { moves.forEach { put(JSONObject().put("id", it.id).put("shopId", it.shopId).put("medicineId", it.medicineId).put("medicineName", it.medicineName).put("type", it.movementType).put("quantity", it.quantity).put("unitPrice", it.unitPrice).put("totalAmount", it.totalAmount).put("occurredAt", it.occurredAt)) } }).toString(2)
+       }.onSuccess { exportText = it; jsonExport.launch("STOCK-X-All-Shops-Drive-Backup.json") }
+        .onFailure { Toast.makeText(context, "Drive backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
       }
      }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) {
-      Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Export all data (JSON)")
+      Icon(Icons.Default.CloudUpload, null); Spacer(Modifier.width(8.dp)); Text("Back up all shops to Drive")
+     }
+     Text("When the save window opens, choose Google Drive and select your folder.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+     OutlinedButton(onClick = {
+      scope.launch {
+       runCatching {
+        val meds = dao.getAllForExport(activeShopId)
+        val moves = dao.getAllMovementsForExport(activeShopId)
+        JSONObject().put("formatVersion", 1).put("shopId", activeShopId).put("shopName", shopName).put("exportedAt", System.currentTimeMillis())
+         .put("medicines", JSONArray().apply { meds.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("strength", it.strength).put("company", it.company).put("unitPrice", it.unitPrice).put("quantity", it.quantity).put("minimumStock", it.minimumStock)) } })
+         .put("stockMovements", JSONArray().apply { moves.forEach { put(JSONObject().put("id", it.id).put("medicineId", it.medicineId).put("medicineName", it.medicineName).put("type", it.movementType).put("quantity", it.quantity).put("unitPrice", it.unitPrice).put("totalAmount", it.totalAmount).put("occurredAt", it.occurredAt)) } }).toString(2)
+       }.onSuccess { exportText = it; jsonExport.launch("STOCK-X-${shopName.replace(" ", "-")}-Backup.json") }
+        .onFailure { Toast.makeText(context, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
+      }
+     }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+      Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Export current shop JSON")
      }
      OutlinedButton(onClick = {
       scope.launch {
