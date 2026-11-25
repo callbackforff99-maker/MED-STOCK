@@ -32,6 +32,7 @@ internal fun MonthlyReportScreen(
     context: Context,
     dao: MedicineDao,
     medicines: List<MedicineEntity>,
+    shopId: Long,
     onBack: () -> Unit
 ) {
     val today = remember { LocalDate.now() }
@@ -48,7 +49,7 @@ internal fun MonthlyReportScreen(
     val zone = remember { ZoneId.systemDefault() }
     val from = startDate?.atStartOfDay(zone)?.toInstant()?.toEpochMilli() ?: 0L
     val to = endDate?.plusDays(1)?.atStartOfDay(zone)?.toInstant()?.toEpochMilli() ?: 0L
-    val movements by (if (valid) dao.observeMovements(from, to) else flowOf(emptyList()))
+    val movements by (if (valid) dao.observeMovements(shopId, from, to) else flowOf(emptyList()))
         .collectAsState(initial = emptyList())
 
     val sales = movements.filter { it.movementType == "OUT" }
