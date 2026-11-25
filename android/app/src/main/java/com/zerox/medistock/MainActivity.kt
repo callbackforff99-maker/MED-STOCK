@@ -140,7 +140,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
  LaunchedEffect(shops) {
   if (shops.isNotEmpty() && shops.none { it.id == selectedShopId }) {
    selectedShopId = shops.first().id
-   prefs.edit().putLong("active_shop_id", selectedShopId).apply()
+   prefs.edit().putLong("active_shop_id", selectedShopId).putString("shop_name", shops.first().name).apply()
   }
  }
  var page by remember { mutableIntStateOf(0) }
@@ -182,7 +182,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
    0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true }, prefs.getString("owner_name", "Owner") ?: "Owner", activeShop?.name ?: "My Shop")
    1 -> InventoryScreen(medicines, search, { search = it }, Modifier.padding(pad), { item, action -> selected = item; mode = action })
    2 -> ShortlistScreen(medicines.filter { it.quantity <= it.minimumStock }, Modifier.padding(pad))
-   3 -> MoreScreen(context, dao, Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", activeShop?.name ?: "My Shop", shops, activeShop?.id ?: selectedShopId, { shopId -> selectedShopId = shopId; prefs.edit().putLong("active_shop_id", shopId).apply() })
+   3 -> MoreScreen(context, dao, Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", activeShop?.name ?: "My Shop", shops, activeShop?.id ?: selectedShopId, { shopId -> selectedShopId = shopId; prefs.edit().putLong("active_shop_id", shopId).putString("shop_name", shops.firstOrNull { it.id == shopId }?.name ?: "My Shop").apply() })
    4 -> MonthlyReportScreen(context, dao, medicines, activeShop?.id ?: selectedShopId) { page = 3 }
   }
  }
