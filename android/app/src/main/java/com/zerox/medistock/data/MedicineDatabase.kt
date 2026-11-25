@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [MedicineEntity::class, StockMovementEntity::class],
-    version = 2,
+    entities = [ShopEntity::class, MedicineEntity::class, StockMovementEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class MedicineDatabase : RoomDatabase() {
@@ -35,6 +35,22 @@ abstract class MedicineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS shops (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        ownerName TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )"""
+                )
+                db.execSQL("INSERT INTO shops (id, name, ownerName, createdAt) VALUES (1, 'My Shop', 'Owner', ${System.currentTimeMillis()})")
+                db.execSQL("ALTER TABLE medicines ADD COLUMN shopId INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE stock_movements ADD COLUMN shopId INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         @Volatile private var instance: MedicineDatabase? = null
 
         fun get(context: Context): MedicineDatabase =
@@ -43,7 +59,7 @@ abstract class MedicineDatabase : RoomDatabase() {
                     context.applicationContext,
                     MedicineDatabase::class.java,
                     "medi_stock.db"
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
             }
     }
 }
