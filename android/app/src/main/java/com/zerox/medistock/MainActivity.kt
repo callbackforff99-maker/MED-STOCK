@@ -118,11 +118,33 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
  var search by remember { mutableStateOf("") }
  Scaffold(containerColor = MaterialTheme.colorScheme.background,
   floatingActionButton = { if (page == 1) FloatingActionButton(onClick = { addOpen = true }, containerColor = Green, contentColor = Color.White) { Icon(Icons.Default.Add, "Add medicine") } },
-  bottomBar = { NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-   val labels = listOf("Home", "Inventory", "Shortlist", "More")
-   val icons = listOf(Icons.Default.Home, Icons.Default.Inventory2, Icons.Default.ShoppingCart, Icons.Default.MoreHoriz)
-   labels.forEachIndexed { i, label -> NavigationBarItem(selected = page == i, onClick = { page = i }, icon = { Icon(icons[i], label) }, label = { Text(label) }) }
-  } }
+  bottomBar = {
+   NavigationBar(
+    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp).shadow(18.dp, RoundedCornerShape(26.dp)),
+    containerColor = MaterialTheme.colorScheme.surface,
+    contentColor = MaterialTheme.colorScheme.onSurface,
+    tonalElevation = 0.dp,
+    windowInsets = WindowInsets(0)
+   ) {
+    val labels = listOf("Home", "Inventory", "Shortlist", "More")
+    val icons = listOf(Icons.Default.Home, Icons.Default.Inventory2, Icons.Default.ShoppingCart, Icons.Default.MoreHoriz)
+    labels.forEachIndexed { i, label ->
+     NavigationBarItem(
+      selected = page == i,
+      onClick = { page = i },
+      icon = { Icon(icons[i], label) },
+      label = { Text(label, fontWeight = if (page == i) FontWeight.Bold else FontWeight.Medium) },
+      colors = NavigationBarItemDefaults.colors(
+       selectedIconColor = Color(0xFF061A12),
+       selectedTextColor = Green,
+       indicatorColor = Green,
+       unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+       unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+      )
+     )
+    }
+   }
+  }
  ) { pad ->
   when (page) {
    0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
@@ -150,18 +172,152 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
 
 @Composable
 private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory: () -> Unit, add: () -> Unit, ownerName: String, shopName: String) {
- val low = data.count { it.quantity <= it.minimumStock }
+ val lowItems = data.filter { it.quantity <= it.minimumStock }
+ val low = lowItems.size
  val value = data.sumOf { it.quantity * it.unitPrice }
- LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-  item { Column(Modifier.padding(top = 24.dp)) { Text("STOCK X", color = MaterialTheme.colorScheme.primary, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp); Text("Stock management, made simple", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-  item { Card(colors = CardDefaults.cardColors(containerColor = Green), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("GOOD DAY, $ownerName", color = Color.White.copy(alpha = .75f), fontSize = 11.sp, letterSpacing = 1.5.sp); Text("Your shop at a glance", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold); Text("$shopName • Active", color = Color.White.copy(alpha = .85f)) } } }
-  item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("Total medicines", data.size.toString(), Modifier.weight(1f)); StatCard("Stock value", "৳" + String.format(Locale.US, "%.2f", value), Modifier.weight(1f)) } }
-  item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("Low stock", low.toString(), Modifier.weight(1f)); StatCard("Items tracked", data.size.toString(), Modifier.weight(1f)) } }
-  item { Text("Quick actions", fontWeight = FontWeight.Bold, fontSize = 18.sp); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { ActionCard("Add medicine", add, Modifier.weight(1f)); ActionCard("View inventory", inventory, Modifier.weight(1f)) } }
-  item { Text("Inventory overview", fontWeight = FontWeight.Bold, fontSize = 18.sp); EmptyCard(if (data.isEmpty()) "Your inventory is empty" else data.size.toString() + " medicines in your shop", if (data.isEmpty()) "Add your first medicine to get started." else low.toString() + " medicines need a stock check.") }
+ LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), contentPadding = PaddingValues(top = 22.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+  item {
+   Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+     Text("GOOD DAY, \${ownerName.uppercase()}", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.7.sp)
+     Text("Your dashboard", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+     Text("Here’s what’s happening in your shop.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+    }
+    Box(Modifier.size(46.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+     Icon(Icons.Default.Store, null, tint = Green, modifier = Modifier.size(23.dp))
+    }
+   }
+  }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth()) {
+    Box(Modifier.background(Brush.linearGradient(listOf(Color(0xFF0C5C3D), Color(0xFF073322), Color(0xFF101B16)))).fillMaxWidth().padding(20.dp)) {
+     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Text("ACTIVE SHOP", color = Color.White.copy(alpha = .72f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, modifier = Modifier.weight(1f))
+       Surface(color = Color.White.copy(alpha = .12f), shape = RoundedCornerShape(30.dp)) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+         Box(Modifier.size(6.dp).background(Color(0xFF4DFFB0), RoundedCornerShape(50)))
+         Spacer(Modifier.width(6.dp))
+         Text("ACTIVE", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+       }
+      }
+      Text(shopName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+      Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .16f)))
+      Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+       Column {
+        Text("MEDICINES", color = Color.White.copy(alpha = .65f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(data.size.toString(), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+       }
+       Column {
+        Text("LOW STOCK", color = Color.White.copy(alpha = .65f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(low.toString(), color = Color(0xFFFFD28B), fontSize = 21.sp, fontWeight = FontWeight.Bold)
+       }
+      }
+     }
+    }
+   }
+  }
+  item {
+   Row(verticalAlignment = Alignment.CenterVertically) {
+    Text("Stock overview", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    Text("LIVE SUMMARY", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+   }
+   Spacer(Modifier.height(10.dp))
+   Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    DashboardMetric("Stock value", "৳" + String.format(Locale.US, "%.0f", value), Icons.Default.AccountBalanceWallet, Modifier.weight(1f))
+    DashboardMetric("Total items", data.size.toString(), Icons.Default.Medication, Modifier.weight(1f))
+   }
+   Spacer(Modifier.height(10.dp))
+   Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    DashboardMetric("Low stock", low.toString(), Icons.Default.Warning, Modifier.weight(1f), if (low > 0) Color(0xFFFFC078) else Green)
+    DashboardMetric("Units in hand", data.sumOf { it.quantity }.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
+   }
+  }
+  item {
+   Row(verticalAlignment = Alignment.CenterVertically) {
+    Text("Quick actions", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    Text("SHORTCUTS", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+   }
+   Spacer(Modifier.height(10.dp))
+   Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    DashboardAction("Add medicine", "Register new stock item", Icons.Default.Add, add, Modifier.weight(1f))
+    DashboardAction("Inventory", "Browse all medicines", Icons.Default.Inventory2, inventory, Modifier.weight(1f))
+   }
+  }
+  item {
+   Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
+     Text("Needs attention", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+     Text("Medicines running low", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+    }
+    TextButton(onClick = inventory) { Text("View all") }
+   }
+   if (lowItems.isEmpty()) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+      Icon(Icons.Default.CheckCircle, null, tint = Green, modifier = Modifier.size(26.dp))
+      Spacer(Modifier.width(12.dp))
+      Column {
+       Text("Everything looks good", fontWeight = FontWeight.Bold)
+       Text("No medicines are below their minimum stock level.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+      }
+     }
+    }
+   } else {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+     lowItems.take(4).forEach { item ->
+      Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+       Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).background(Color(0xFF332519), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+         Icon(Icons.Default.Medication, null, tint = Color(0xFFFFC078))
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(Modifier.weight(1f)) {
+         Text(item.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+         Text(item.company.ifBlank { item.strength }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+         Text("\${item.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+         Text("Min \${item.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+        }
+       }
+      }
+     }
+    }
+   }
+  }
  }
 }
 
+@Composable
+private fun DashboardMetric(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, accent: Color = Green) {
+ Card(modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
+  Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+   Box(Modifier.size(34.dp).background(accent.copy(alpha = .13f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+    Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
+   }
+   Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+   Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+  }
+ }
+}
+
+@Composable
+private fun DashboardAction(label: String, detail: String, icon: androidx.compose.ui.graphics.vector.ImageVector, action: () -> Unit, modifier: Modifier) {
+ Card(modifier.clickable(onClick = action), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
+  Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+   Box(Modifier.size(40.dp).background(Green.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+    Icon(icon, null, tint = Green)
+   }
+   Spacer(Modifier.width(10.dp))
+   Column(Modifier.weight(1f)) {
+    Text(label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+   }
+  }
+ }
+}
 @Composable
 private fun InventoryScreen(data: List<MedicineEntity>, search: String, onSearch: (String) -> Unit, modifier: Modifier, onStock: (MedicineEntity, String) -> Unit) {
  val filtered = data.filter { it.name.contains(search, true) || it.company.contains(search, true) || it.strength.contains(search, true) }
