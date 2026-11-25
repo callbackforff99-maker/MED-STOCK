@@ -16,5 +16,6 @@ data class StockMovementEntity(
     val quantity: Int,
     val unitPrice: Double,
     val totalAmount: Double,
-    val occurredAt: Long = System.currentTimeMillis()
+    val occurredAt: Long = System.currentTimeMillis(),
+    val shopId: Long = 1
 )
