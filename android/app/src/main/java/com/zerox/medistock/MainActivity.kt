@@ -122,8 +122,27 @@ private fun ProfileSetup(onComplete: (String, String) -> Unit) {
 }
 @Composable
 private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, prefs: android.content.SharedPreferences, onDarkModeChange: (Boolean) -> Unit) {
- val medicines by dao.observeAll().collectAsState(initial = emptyList())
  val scope = rememberCoroutineScope()
+ val shops by dao.observeShops().collectAsState(initial = emptyList())
+ var selectedShopId by remember { mutableLongStateOf(prefs.getLong("active_shop_id", 1L)) }
+ val activeShop = shops.firstOrNull { it.id == selectedShopId } ?: shops.firstOrNull()
+ val medicines by dao.observeAll(activeShop?.id ?: selectedShopId).collectAsState(initial = emptyList())
+ LaunchedEffect(Unit) {
+  val existing = dao.getShops()
+  if (existing.isEmpty()) {
+   dao.insertShop(ShopEntity(name = prefs.getString("shop_name", "My Shop") ?: "My Shop", ownerName = prefs.getString("owner_name", "Owner") ?: "Owner"))
+  } else {
+   val defaultShop = existing.firstOrNull { it.id == 1L }
+   val savedName = prefs.getString("shop_name", null)
+   if (defaultShop != null && !savedName.isNullOrBlank() && defaultShop.name == "My Shop" && savedName != "My Shop") dao.renameShop(1L, savedName)
+  }
+ }
+ LaunchedEffect(shops) {
+  if (shops.isNotEmpty() && shops.none { it.id == selectedShopId }) {
+   selectedShopId = shops.first().id
+   prefs.edit().putLong("active_shop_id", selectedShopId).apply()
+  }
+ }
  var page by remember { mutableIntStateOf(0) }
  var addOpen by remember { mutableStateOf(false) }
  var selected by remember { mutableStateOf<MedicineEntity?>(null) }
