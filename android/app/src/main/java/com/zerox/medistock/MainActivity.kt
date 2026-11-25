@@ -7,6 +7,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -157,7 +162,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
    0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
    1 -> InventoryScreen(medicines, search, { search = it }, Modifier.padding(pad), { item, action -> selected = item; mode = action })
    2 -> ShortlistScreen(medicines.filter { it.quantity <= it.minimumStock }, Modifier.padding(pad))
-   3 -> MoreScreen(Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
+   3 -> MoreScreen(context, dao, Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", prefs.getString("shop_name", "My Shop") ?: "My Shop")
    4 -> MonthlyReportScreen(context, dao, medicines) { page = 3 }
   }
  }
@@ -414,8 +419,24 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
  }
 }
 @Composable
-private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
+private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
  val uri = LocalUriHandler.current
+ val scope = rememberCoroutineScope()
+ var exportText by remember { mutableStateOf("") }
+ val jsonExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { target ->
+  if (target != null) {
+   runCatching { context.contentResolver.openOutputStream(target)?.bufferedWriter()?.use { it.write(exportText) } ?: error("Unable to open destination") }
+    .onSuccess { Toast.makeText(context, "Backup exported successfully", Toast.LENGTH_LONG).show() }
+    .onFailure { Toast.makeText(context, "Export failed: ${it.message}", Toast.LENGTH_LONG).show() }
+  }
+ }
+ val csvExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { target ->
+  if (target != null) {
+   runCatching { context.contentResolver.openOutputStream(target)?.bufferedWriter()?.use { it.write(exportText) } ?: error("Unable to open destination") }
+    .onSuccess { Toast.makeText(context, "CSV exported successfully", Toast.LENGTH_LONG).show() }
+    .onFailure { Toast.makeText(context, "Export failed: ${it.message}", Toast.LENGTH_LONG).show() }
+  }
+ }
  LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), contentPadding = PaddingValues(top = 22.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
   item {
    Text("Settings", color = MaterialTheme.colorScheme.onBackground, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
@@ -443,6 +464,40 @@ private fun MoreScreen(modifier: Modifier, darkMode: Boolean, onDarkModeChange: 
   item {
    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onReports)) {
     ListItem(leadingContent = { Box(Modifier.size(40.dp).background(Green.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PictureAsPdf, null, tint = Green) } }, headlineContent = { Text("Month-end report", fontWeight = FontWeight.SemiBold) }, supportingContent = { Text("Date range, sales and stock summary PDF") }, trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) })
+   }
+  }
+  item { Text("DATA & PRIVACY", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+     Text("Your data stays on this device unless you export it.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+     Button(onClick = {
+      scope.launch {
+       runCatching {
+        val meds = dao.getAllForExport()
+        val moves = dao.getAllMovementsForExport()
+        JSONObject().put("formatVersion", 1).put("exportedAt", System.currentTimeMillis())
+         .put("medicines", JSONArray().apply { meds.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("strength", it.strength).put("company", it.company).put("unitPrice", it.unitPrice).put("quantity", it.quantity).put("minimumStock", it.minimumStock)) } })
+         .put("stockMovements", JSONArray().apply { moves.forEach { put(JSONObject().put("id", it.id).put("medicineId", it.medicineId).put("medicineName", it.medicineName).put("type", it.movementType).put("quantity", it.quantity).put("unitPrice", it.unitPrice).put("totalAmount", it.totalAmount).put("occurredAt", it.occurredAt)) } }).toString(2)
+       }.onSuccess { exportText = it; jsonExport.launch("STOCK-X-Backup.json") }
+        .onFailure { Toast.makeText(context, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
+      }
+     }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) {
+      Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Export all data (JSON)")
+     }
+     OutlinedButton(onClick = {
+      scope.launch {
+       runCatching {
+        val meds = dao.getAllForExport()
+        val header = "id,name,strength,company,unit_price,quantity,minimum_stock"
+        (listOf(header) + meds.map { listOf(it.id, it.name, it.strength, it.company, it.unitPrice, it.quantity, it.minimumStock).joinToString(",") { v -> "\"${v.toString().replace("\"", "\"\"")}\"" } }).joinToString("\n")
+       }.onSuccess { exportText = it; csvExport.launch("STOCK-X-Medicines.csv") }
+        .onFailure { Toast.makeText(context, "CSV export failed: ${it.message}", Toast.LENGTH_LONG).show() }
+      }
+     }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+      Icon(Icons.Default.TableView, null); Spacer(Modifier.width(8.dp)); Text("Export medicines CSV")
+     }
+    }
    }
   }
   item { Text("DEVELOPER", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
