@@ -11,6 +11,12 @@ interface MedicineDao {
     @Query("SELECT * FROM medicines ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<MedicineEntity>>
 
+    @Query("SELECT * FROM medicines ORDER BY name COLLATE NOCASE")
+    suspend fun getAllForExport(): List<MedicineEntity>
+
+    @Query("SELECT * FROM stock_movements ORDER BY occurredAt ASC")
+    suspend fun getAllMovementsForExport(): List<StockMovementEntity>
+
     @Insert
     suspend fun insert(item: MedicineEntity)
 
