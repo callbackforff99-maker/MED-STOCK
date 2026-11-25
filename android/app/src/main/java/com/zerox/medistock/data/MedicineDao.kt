@@ -17,6 +17,9 @@ interface MedicineDao {
     @Insert
     suspend fun insertShop(shop: ShopEntity): Long
 
+    @Query("UPDATE shops SET name=:name WHERE id=:shopId")
+    suspend fun renameShop(shopId: Long, name: String)
+
     @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE")
     fun observeAll(shopId: Long): Flow<List<MedicineEntity>>
 
