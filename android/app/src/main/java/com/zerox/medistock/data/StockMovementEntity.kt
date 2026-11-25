@@ -1,6 +1,7 @@
 package com.zerox.medistock.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -17,5 +18,5 @@ data class StockMovementEntity(
     val unitPrice: Double,
     val totalAmount: Double,
     val occurredAt: Long = System.currentTimeMillis(),
-    val shopId: Long = 1
+    @ColumnInfo(defaultValue = "1") val shopId: Long = 1
 )
