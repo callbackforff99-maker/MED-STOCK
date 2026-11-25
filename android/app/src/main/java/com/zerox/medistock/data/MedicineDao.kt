@@ -14,6 +14,12 @@ interface MedicineDao {
     @Query("SELECT * FROM shops ORDER BY id ASC")
     suspend fun getShops(): List<ShopEntity>
 
+    @Query("SELECT * FROM medicines ORDER BY shopId, name COLLATE NOCASE")
+    suspend fun getAllMedicinesForBackup(): List<MedicineEntity>
+
+    @Query("SELECT * FROM stock_movements ORDER BY shopId, occurredAt ASC")
+    suspend fun getAllMovementsForBackup(): List<StockMovementEntity>
+
     @Insert
     suspend fun insertShop(shop: ShopEntity): Long
 
