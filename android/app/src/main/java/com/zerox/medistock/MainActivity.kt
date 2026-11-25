@@ -167,7 +167,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
   }
  }
  if (addOpen) AddMedicineDialog({ addOpen = false }) { n, s, c, p, q, min ->
-  scope.launch { dao.insert(MedicineEntity(name = n, strength = s, company = c, unitPrice = p, quantity = q, minimumStock = min)) }
+  scope.launch { dao.insert(MedicineEntity(name = n, strength = s, company = c, unitPrice = p, quantity = q, minimumStock = min, shopId = activeShop?.id ?: selectedShopId)) }
   addOpen = false
  }
  selected?.let { item -> StockDialog(item, mode, { selected = null }) { amount ->
@@ -175,7 +175,7 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
   if (amount <= 0 || updated < 0) return@StockDialog
   scope.launch {
    dao.saveMovementAndQty(
-    StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.unitPrice, totalAmount = amount * item.unitPrice),
+    StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.unitPrice, totalAmount = amount * item.unitPrice, shopId = activeShop?.id ?: selectedShopId),
     updated
    )
   }
@@ -419,9 +419,11 @@ private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
  }
 }
 @Composable
-private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String) {
+private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onReports: () -> Unit, ownerName: String, shopName: String, shops: List<ShopEntity>, activeShopId: Long, onShopSelected: (Long) -> Unit) {
  val uri = LocalUriHandler.current
  val scope = rememberCoroutineScope()
+ var addShopOpen by remember { mutableStateOf(false) }
+ var newShopName by remember { mutableStateOf("") }
  var exportText by remember { mutableStateOf("") }
  val jsonExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { target ->
   if (target != null) {
@@ -455,6 +457,27 @@ private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, d
     }
    }
   }
+  item { Text("YOUR SHOPS", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
+  item {
+   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
+    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+     shops.forEach { shop ->
+      Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (shop.id == activeShopId) Green.copy(alpha = .12f) else Color.Transparent).clickable { onShopSelected(shop.id) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+       Icon(Icons.Default.Store, null, tint = if (shop.id == activeShopId) Green else MaterialTheme.colorScheme.onSurfaceVariant)
+       Spacer(Modifier.width(10.dp))
+       Column(Modifier.weight(1f)) {
+        Text(shop.name, fontWeight = if (shop.id == activeShopId) FontWeight.Bold else FontWeight.Medium)
+        Text(if (shop.id == activeShopId) "Currently active" else "Tap to switch shop", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+       }
+       if (shop.id == activeShopId) Icon(Icons.Default.CheckCircle, null, tint = Green)
+      }
+     }
+     OutlinedButton(onClick = { newShopName = ""; addShopOpen = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+      Icon(Icons.Default.AddBusiness, null); Spacer(Modifier.width(8.dp)); Text("Add another shop")
+     }
+    }
+   }
+  }
   item { Text("PREFERENCES", color = Green, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp) }
   item {
    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp)) {
@@ -474,8 +497,8 @@ private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, d
      Button(onClick = {
       scope.launch {
        runCatching {
-        val meds = dao.getAllForExport()
-        val moves = dao.getAllMovementsForExport()
+        val meds = dao.getAllForExport(activeShopId)
+        val moves = dao.getAllMovementsForExport(activeShopId)
         JSONObject().put("formatVersion", 1).put("exportedAt", System.currentTimeMillis())
          .put("medicines", JSONArray().apply { meds.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("strength", it.strength).put("company", it.company).put("unitPrice", it.unitPrice).put("quantity", it.quantity).put("minimumStock", it.minimumStock)) } })
          .put("stockMovements", JSONArray().apply { moves.forEach { put(JSONObject().put("id", it.id).put("medicineId", it.medicineId).put("medicineName", it.medicineName).put("type", it.movementType).put("quantity", it.quantity).put("unitPrice", it.unitPrice).put("totalAmount", it.totalAmount).put("occurredAt", it.occurredAt)) } }).toString(2)
@@ -488,7 +511,7 @@ private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, d
      OutlinedButton(onClick = {
       scope.launch {
        runCatching {
-        val meds = dao.getAllForExport()
+        val meds = dao.getAllForExport(activeShopId)
         val header = "id,name,strength,company,unit_price,quantity,minimum_stock"
         (listOf(header) + meds.map { listOf(it.id, it.name, it.strength, it.company, it.unitPrice, it.quantity, it.minimumStock).joinToString(",") { v -> "\"${v.toString().replace("\"", "\"\"")}\"" } }).joinToString("\n")
        }.onSuccess { exportText = it; csvExport.launch("STOCK-X-Medicines.csv") }
@@ -525,6 +548,24 @@ private fun MoreScreen(context: Context, dao: MedicineDao, modifier: Modifier, d
    }
   }
   item { Text("STOCK X  •  ZEROX", color = MutedText, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+ }
+ if (addShopOpen) {
+  AlertDialog(
+   onDismissRequest = { addShopOpen = false },
+   title = { Text("Add another shop") },
+   text = { OutlinedTextField(newShopName, { newShopName = it }, label = { Text("Shop name") }, singleLine = true, shape = RoundedCornerShape(14.dp)) },
+   confirmButton = {
+    Button(enabled = newShopName.isNotBlank() && shops.none { it.name.equals(newShopName.trim(), ignoreCase = true) }, onClick = {
+     scope.launch {
+      val newId = dao.insertShop(ShopEntity(name = newShopName.trim(), ownerName = ownerName))
+      onShopSelected(newId)
+      Toast.makeText(context, "Shop added. You are now using ${newShopName.trim()}.", Toast.LENGTH_LONG).show()
+     }
+     addShopOpen = false
+    }) { Text("Create shop") }
+   },
+   dismissButton = { TextButton(onClick = { addShopOpen = false }) { Text("Cancel") } }
+  )
  }
 }
 @Composable
