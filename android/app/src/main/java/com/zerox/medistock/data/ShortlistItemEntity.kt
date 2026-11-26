@@ -1,7 +1,8 @@
 package com.zerox.medistock.data
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
-@Entity(tableName = "shortlist_items")
+@Entity(tableName = "shortlist_items", indices = [Index(value = ["shopId", "dateKey"])])
 data class ShortlistItemEntity(
  @PrimaryKey(autoGenerate = true) val id: Long = 0,
  val shopId: Long,
