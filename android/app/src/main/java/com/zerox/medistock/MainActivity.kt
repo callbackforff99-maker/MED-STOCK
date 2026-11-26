@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.zerox.medistock.data.*
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.time.LocalDate
 
 private val Green = Color(0xFF00D98B)
 private val Bg = Color(0xFF080B0A)
@@ -181,13 +182,13 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
   when (page) {
    0 -> HomeScreen(medicines, Modifier.padding(pad), { page = 1 }, { addOpen = true }, prefs.getString("owner_name", "Owner") ?: "Owner", activeShop?.name ?: "My Shop")
    1 -> InventoryScreen(medicines, search, { search = it }, Modifier.padding(pad), { item, action -> selected = item; mode = action })
-   2 -> ShortlistScreen(medicines.filter { it.quantity <= it.minimumStock }, Modifier.padding(pad))
+   2 -> ShortlistScreen(dao, activeShop?.id ?: selectedShopId, medicines, Modifier.padding(pad))
    3 -> MoreScreen(context, dao, Modifier.padding(pad), darkMode, onDarkModeChange, { page = 4 }, prefs.getString("owner_name", "Owner") ?: "Owner", activeShop?.name ?: "My Shop", shops, activeShop?.id ?: selectedShopId, { shopId -> selectedShopId = shopId; prefs.edit().putLong("active_shop_id", shopId).putString("shop_name", shops.firstOrNull { it.id == shopId }?.name ?: "My Shop").apply() })
    4 -> MonthlyReportScreen(context, dao, medicines, activeShop?.id ?: selectedShopId) { page = 3 }
   }
  }
  if (addOpen) AddMedicineDialog({ addOpen = false }) { n, s, c, p, q, min ->
-  scope.launch { dao.insert(MedicineEntity(name = n, strength = s, company = c, unitPrice = p, quantity = q, minimumStock = min, shopId = activeShop?.id ?: selectedShopId)) }
+  scope.launch { dao.insert(MedicineEntity(name = n, strength = s, company = c, boxPrice = p, boxQuantity = q, minimumStock = min, shopId = activeShop?.id ?: selectedShopId)) }
   addOpen = false
  }
  selected?.let { item -> StockDialog(item, mode, { selected = null }) { amount ->
@@ -205,9 +206,9 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
 
 @Composable
 private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory: () -> Unit, add: () -> Unit, ownerName: String, shopName: String) {
- val lowItems = data.filter { it.quantity <= it.minimumStock }
+ val lowItems = data.filter { it.boxQuantity <= it.minimumStock }
  val low = lowItems.size
- val value = data.sumOf { it.quantity * it.unitPrice }
+ val value = data.sumOf { it.boxQuantity * it.boxPrice }
  LazyColumn(modifier.fillMaxSize().padding(horizontal = 18.dp), contentPadding = PaddingValues(top = 22.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
   item {
    Row(verticalAlignment = Alignment.CenterVertically) {
@@ -264,7 +265,7 @@ private fun HomeScreen(data: List<MedicineEntity>, modifier: Modifier, inventory
    Spacer(Modifier.height(10.dp))
    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
     DashboardMetric("Low stock", low.toString(), Icons.Default.Warning, Modifier.weight(1f), if (low > 0) Color(0xFFFFC078) else Green)
-    DashboardMetric("Units in hand", data.sumOf { it.quantity }.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
+    DashboardMetric("Boxes in hand", data.sumOf { it.boxQuantity }.toString(), Icons.Default.Inventory2, Modifier.weight(1f))
    }
   }
   item {
@@ -389,9 +390,9 @@ private fun MedicineCard(item: MedicineEntity, onStock: (MedicineEntity, String)
    Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = .35f)))
    Row(verticalAlignment = Alignment.CenterVertically) {
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-     Text("QUANTITY", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-     Text(item.quantity.toString(), color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-     Text("৳" + String.format(Locale.US, "%.2f", item.unitPrice) + " / unit", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+     Text("BOXES IN STOCK", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+     Text(item.boxQuantity.toString(), color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+     Text("৳" + String.format(Locale.US, "%.2f", item.boxPrice) + " / box", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
     }
     OutlinedButton(onClick = { onStock(item, "OUT") }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) { Icon(Icons.Default.Remove, null, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(3.dp)); Text("OUT") }
     Spacer(Modifier.width(7.dp))
@@ -401,41 +402,96 @@ private fun MedicineCard(item: MedicineEntity, onStock: (MedicineEntity, String)
  }
 }
 @Composable
-private fun ShortlistScreen(items: List<MedicineEntity>, modifier: Modifier) {
+private fun ShortlistScreen(dao: MedicineDao, shopId: Long, medicines: List<MedicineEntity>, modifier: Modifier) {
+ val today = LocalDate.now().toString()
+ val rows by dao.observeDailyShortlist(shopId, today).collectAsState(initial = emptyList())
+ val suggestions by dao.observeShortlistSuggestions(shopId).collectAsState(initial = emptyList())
+ val scope = rememberCoroutineScope()
+ var addOpen by remember { mutableStateOf(false) }
+ var name by remember { mutableStateOf("") }
+ var currentBoxes by remember { mutableStateOf("0") }
+ var buyBoxes by remember { mutableStateOf("1") }
+ var boxPrice by remember { mutableStateOf("0") }
+ val matched = medicines.firstOrNull { it.name.equals(name.trim(), true) }
+ fun openAdd(prefill: String = "") {
+  name = prefill
+  val med = medicines.firstOrNull { it.name.equals(prefill.trim(), true) }
+  currentBoxes = (med?.boxQuantity ?: 0).toString()
+  buyBoxes = "1"
+  boxPrice = (med?.boxPrice ?: 0.0).toString()
+  addOpen = true
+ }
  Column(modifier.fillMaxSize().padding(horizontal = 18.dp)) {
-  Text("Purchase shortlist", color = MaterialTheme.colorScheme.onBackground, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 22.dp))
-  Text("Items that need to be reordered", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp, bottom = 16.dp))
-  Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF102B1F)), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-   Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-    Icon(Icons.Default.ShoppingCart, null, tint = Green, modifier = Modifier.size(25.dp))
-    Spacer(Modifier.width(12.dp))
-    Column {
-     Text("${items.size} items to purchase", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-     Text("Based on your minimum stock level", color = Color(0xFF9EB8A9), fontSize = 11.sp)
-    }
+  Row(Modifier.padding(top = 22.dp), verticalAlignment = Alignment.CenterVertically) {
+   Column(Modifier.weight(1f)) {
+    Text("Purchase shortlist", color = MaterialTheme.colorScheme.onBackground, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+    Text("Today · $today", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+   }
+   Button(onClick = { openAdd() }, shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) {
+    Icon(Icons.Default.Add, null); Spacer(Modifier.width(5.dp)); Text("Add item")
    }
   }
   Spacer(Modifier.height(14.dp))
-  if (items.isEmpty()) EmptyCard("All stocked up", "No medicines currently need reordering.")
+  Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF102B1F)), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+   Column(Modifier.padding(16.dp)) {
+    Text("${rows.size} items planned today", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    Text("Total purchase estimate · ৳${String.format(Locale.US, "%.2f", rows.sumOf { it.buyBoxes * it.boxPrice })}", color = Color(0xFF9FE7C5), fontSize = 12.sp)
+   }
+  }
+  Spacer(Modifier.height(12.dp))
+  if (rows.isEmpty()) EmptyCard("Today's list is empty", "Add medicines you need to buy today. Your previous entries will appear as suggestions next time.")
   else LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-   items(items, key = { it.id }) { m ->
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(19.dp), modifier = Modifier.fillMaxWidth()) {
-     Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-      Box(Modifier.size(42.dp).background(Color(0xFF382919), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.ShoppingBasket, null, tint = Color(0xFFFFC078)) }
-      Spacer(Modifier.width(11.dp))
-      Column(Modifier.weight(1f)) {
-       Text(m.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-       Text(m.company.ifBlank { m.strength }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-       Text("Minimum: ${m.minimumStock}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+   items(rows, key = { it.id }) { item ->
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Column(Modifier.weight(1f)) {
+        Text(item.medicineName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("Current: ${item.currentStockBoxes} boxes  ·  Buy: ${item.buyBoxes} boxes", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+       }
+       Text("৳${String.format(Locale.US, "%.0f", item.buyBoxes * item.boxPrice)}", color = Green, fontWeight = FontWeight.Bold)
       }
-      Column(horizontalAlignment = Alignment.End) {
-       Text("${m.quantity} left", color = Color(0xFFFFC078), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-       Text("Reorder", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Text("৳${String.format(Locale.US, "%.2f", item.boxPrice)} / box", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.weight(1f))
+       TextButton(onClick = { scope.launch { dao.setShortlistPurchased(item.id, !item.purchased) } }) { Text(if (item.purchased) "Purchased ✓" else "Mark purchased", color = if (item.purchased) Green else MaterialTheme.colorScheme.onSurfaceVariant) }
+       IconButton(onClick = { scope.launch { dao.deleteShortlistItem(item.id) } }) { Icon(Icons.Default.DeleteOutline, "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
       }
      }
     }
    }
   }
+ }
+ if (addOpen) {
+  AlertDialog(
+   onDismissRequest = { addOpen = false },
+   title = { Text("Create today's shortlist item", fontWeight = FontWeight.Bold) },
+   text = {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+     OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Medicine name") }, singleLine = true, shape = RoundedCornerShape(13.dp))
+     val choices = (suggestions + medicines.map { it.name }).distinct().filter { it.contains(name, true) }.take(5)
+     choices.forEach { suggestion ->
+      TextButton(onClick = {
+       name = suggestion
+       val med = medicines.firstOrNull { it.name.equals(suggestion, true) }
+       currentBoxes = (med?.boxQuantity ?: 0).toString()
+       boxPrice = (med?.boxPrice ?: 0.0).toString()
+      }) { Text("↳ $suggestion", color = Green) }
+     }
+     OutlinedTextField(currentBoxes, { currentBoxes = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Current stock (boxes)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(13.dp))
+     OutlinedTextField(buyBoxes, { buyBoxes = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("How many boxes to buy?") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(13.dp))
+     OutlinedTextField(boxPrice, { boxPrice = it }, Modifier.fillMaxWidth(), label = { Text("Price per box (৳)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, shape = RoundedCornerShape(13.dp))
+     Text("Estimated total: ৳${String.format(Locale.US, "%.2f", (buyBoxes.toIntOrNull() ?: 0) * (boxPrice.toDoubleOrNull() ?: 0.0))}", color = Green, fontWeight = FontWeight.Bold)
+    }
+   },
+   confirmButton = {
+    Button(enabled = name.isNotBlank() && (currentBoxes.toIntOrNull() ?: -1) >= 0 && (buyBoxes.toIntOrNull() ?: 0) > 0 && (boxPrice.toDoubleOrNull() ?: -1.0) >= 0,
+     onClick = {
+      scope.launch { dao.insertShortlistItem(ShortlistItemEntity(shopId = shopId, medicineName = name.trim(), currentStockBoxes = currentBoxes.toInt(), buyBoxes = buyBoxes.toInt(), boxPrice = boxPrice.toDouble(), dateKey = today)) }
+      addOpen = false
+     }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Save item") }
+   },
+   dismissButton = { TextButton(onClick = { addOpen = false }) { Text("Cancel") } }
+  )
  }
 }
 @Composable
@@ -645,8 +701,8 @@ private fun AddMedicineDialog(close: () -> Unit, save: (String, String, String, 
    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Medicine name *") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
    OutlinedTextField(strength, { strength = it }, Modifier.fillMaxWidth(), label = { Text("Strength") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
    OutlinedTextField(company, { company = it }, Modifier.fillMaxWidth(), label = { Text("Company") }, singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
-   OutlinedTextField(price, { price = it }, Modifier.fillMaxWidth(), label = { Text("Unit price (৳)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
-   OutlinedTextField(qty, { qty = it }, Modifier.fillMaxWidth(), label = { Text("Opening quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(price, { price = it }, Modifier.fillMaxWidth(), label = { Text("Price per box (৳)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(qty, { qty = it }, Modifier.fillMaxWidth(), label = { Text("Opening box quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
    OutlinedTextField(min, { min = it }, Modifier.fillMaxWidth(), label = { Text("Low-stock threshold") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
   }
  }, confirmButton = { Button(enabled = name.isNotBlank() && (price.toDoubleOrNull() ?: -1.0) >= 0 && (qty.toIntOrNull() ?: -1) >= 0 && (min.toIntOrNull() ?: -1) >= 0, onClick = { save(name.trim(), strength.trim(), company.trim(), price.toDoubleOrNull() ?: 0.0, qty.toIntOrNull() ?: 0, min.toIntOrNull() ?: 10) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Save medicine", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
@@ -660,13 +716,13 @@ private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, c
   Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
    Text(item.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) { Text("Available: ${item.quantity}", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) { Text("Available: ${item.boxQuantity} boxes", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
     Surface(color = if (isIn) Color(0xFF123426) else Color(0xFF38251D), shape = RoundedCornerShape(12.dp)) { Text(if (isIn) "STOCK IN" else "STOCK OUT", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = if (isIn) Color(0xFF63E6AC) else Color(0xFFFFB18B), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
    }
-   OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Quantity") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
+   OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Quantity (boxes)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
    if (!isIn && number > item.quantity) Text("Insufficient stock", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
   }
- }, confirmButton = { Button(enabled = number > 0 && (isIn || number <= item.quantity), onClick = { confirm(number) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Confirm movement", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
+ }, confirmButton = { Button(enabled = number > 0 && (isIn || number <= item.boxQuantity), onClick = { confirm(number) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Confirm movement", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
 }
 @Composable
 private fun StatCard(title: String, value: String, modifier: Modifier) {
