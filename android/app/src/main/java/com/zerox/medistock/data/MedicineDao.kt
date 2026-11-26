@@ -1,55 +1,33 @@
 package com.zerox.medistock.data
-
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
-
 @Dao
 interface MedicineDao {
-    @Query("SELECT * FROM shops ORDER BY id ASC")
-    fun observeShops(): Flow<List<ShopEntity>>
-
-    @Query("SELECT * FROM shops ORDER BY id ASC")
-    suspend fun getShops(): List<ShopEntity>
-
-    @Query("SELECT * FROM medicines ORDER BY shopId, name COLLATE NOCASE")
-    suspend fun getAllMedicinesForBackup(): List<MedicineEntity>
-
-    @Query("SELECT * FROM stock_movements ORDER BY shopId, occurredAt ASC")
-    suspend fun getAllMovementsForBackup(): List<StockMovementEntity>
-
-    @Insert
-    suspend fun insertShop(shop: ShopEntity): Long
-
-    @Query("UPDATE shops SET name=:name WHERE id=:shopId")
-    suspend fun renameShop(shopId: Long, name: String)
-
-    @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE")
-    fun observeAll(shopId: Long): Flow<List<MedicineEntity>>
-
-    @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE")
-    suspend fun getAllForExport(shopId: Long): List<MedicineEntity>
-
-    @Query("SELECT * FROM stock_movements WHERE shopId=:shopId ORDER BY occurredAt ASC")
-    suspend fun getAllMovementsForExport(shopId: Long): List<StockMovementEntity>
-
-    @Insert
-    suspend fun insert(item: MedicineEntity)
-
-    @Query("UPDATE medicines SET quantity=:qty WHERE id=:id")
-    suspend fun setQty(id: Long, qty: Int)
-
-    @Insert
-    suspend fun insertMovement(item: StockMovementEntity)
-
-    @Transaction
-    suspend fun saveMovementAndQty(item: StockMovementEntity, newQty: Int) {
-        insertMovement(item)
-        setQty(item.medicineId, newQty)
-    }
-
-    @Query("SELECT * FROM stock_movements WHERE shopId=:shopId AND occurredAt >= :fromInclusive AND occurredAt < :toExclusive ORDER BY occurredAt ASC")
-    fun observeMovements(shopId: Long, fromInclusive: Long, toExclusive: Long): Flow<List<StockMovementEntity>>
+ @Query("SELECT * FROM shops ORDER BY id ASC") fun observeShops(): Flow<List<ShopEntity>>
+ @Query("SELECT * FROM shops ORDER BY id ASC") suspend fun getShops(): List<ShopEntity>
+ @Query("SELECT * FROM medicines ORDER BY shopId, name COLLATE NOCASE") suspend fun getAllMedicinesForBackup(): List<MedicineEntity>
+ @Query("SELECT * FROM stock_movements ORDER BY shopId, occurredAt ASC") suspend fun getAllMovementsForBackup(): List<StockMovementEntity>
+ @Insert suspend fun insertShop(shop: ShopEntity): Long
+ @Query("UPDATE shops SET name=:name WHERE id=:shopId") suspend fun renameShop(shopId: Long, name: String)
+ @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE") fun observeAll(shopId: Long): Flow<List<MedicineEntity>>
+ @Query("SELECT * FROM medicines WHERE shopId=:shopId ORDER BY name COLLATE NOCASE") suspend fun getAllForExport(shopId: Long): List<MedicineEntity>
+ @Query("SELECT * FROM stock_movements WHERE shopId=:shopId ORDER BY occurredAt ASC") suspend fun getAllMovementsForExport(shopId: Long): List<StockMovementEntity>
+ @Insert suspend fun insert(item: MedicineEntity)
+ @Query("UPDATE medicines SET quantity=:qty, boxQuantity=:boxes WHERE id=:id") suspend fun setQty(id: Long, qty: Int, boxes: Int)
+ @Insert suspend fun insertMovement(item: StockMovementEntity)
+ @Transaction suspend fun saveMovementAndQty(item: StockMovementEntity, newQty: Int, newBoxes: Int = 0) {
+  insertMovement(item); setQty(item.medicineId, newQty, newBoxes)
+ }
+ @Query("SELECT * FROM stock_movements WHERE shopId=:shopId AND occurredAt >= :fromInclusive AND occurredAt < :toExclusive ORDER BY occurredAt ASC")
+ fun observeMovements(shopId: Long, fromInclusive: Long, toExclusive: Long): Flow<List<StockMovementEntity>>
+ @Query("SELECT * FROM shortlist_items WHERE shopId=:shopId AND dateKey=:dateKey ORDER BY createdAt DESC")
+ fun observeDailyShortlist(shopId: Long, dateKey: String): Flow<List<ShortlistItemEntity>>
+ @Query("SELECT DISTINCT medicineName FROM shortlist_items WHERE shopId=:shopId ORDER BY createdAt DESC LIMIT 12")
+ fun observeShortlistSuggestions(shopId: Long): Flow<List<String>>
+ @Insert suspend fun insertShortlistItem(item: ShortlistItemEntity)
+ @Query("UPDATE shortlist_items SET purchased=:purchased WHERE id=:id") suspend fun setShortlistPurchased(id: Long, purchased: Boolean)
+ @Query("DELETE FROM shortlist_items WHERE id=:id") suspend fun deleteShortlistItem(id: Long)
 }
