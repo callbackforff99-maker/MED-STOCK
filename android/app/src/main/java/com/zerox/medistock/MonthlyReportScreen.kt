@@ -56,8 +56,8 @@ internal fun MonthlyReportScreen(
     val purchases = movements.filter { it.movementType == "IN" }
     val salesTotal = sales.sumOf { it.totalAmount }
     val purchaseTotal = purchases.sumOf { it.totalAmount }
-    val stockValue = medicines.sumOf { it.quantity * it.unitPrice }
-    val unsoldUnits = medicines.sumOf { it.quantity }
+    val stockValue = medicines.sumOf { it.boxQuantity * it.boxPrice }
+    val unsoldUnits = medicines.sumOf { it.boxQuantity }
     val unsoldValue = stockValue
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 18.dp, vertical = 12.dp)) {
@@ -211,7 +211,7 @@ private fun createStockReport(
         "Sales revenue" to "৳${money(sales)}",
         "Stock purchase cost" to "৳${money(purchases)}",
         "Current stock value" to "৳${money(stockValue)}",
-        "Products currently in stock" to medicines.sumOf { it.quantity }.toString(),
+        "Products currently in stock" to medicines.sumOf { it.boxQuantity }.toString(),
         "Stock IN units" to movements.filter { it.movementType == "IN" }.sumOf { it.quantity }.toString(),
         "Stock OUT units" to movements.filter { it.movementType == "OUT" }.sumOf { it.quantity }.toString()
     )
@@ -237,8 +237,8 @@ private fun createStockReport(
             drawPageHeader(true)
         }
         canvas.drawText(med.name.take(42), 42f, y, bodyPaint)
-        canvas.drawText(med.quantity.toString(), 365f, y, bodyPaint)
-        canvas.drawText("৳${money(med.quantity * med.unitPrice)}", 430f, y, bodyPaint)
+        canvas.drawText(med.boxQuantity.toString(), 365f, y, bodyPaint)
+        canvas.drawText("৳${money(med.boxQuantity * med.boxPrice)}", 430f, y, bodyPaint)
         y += 18f
     }
     if (medicines.isEmpty()) {
