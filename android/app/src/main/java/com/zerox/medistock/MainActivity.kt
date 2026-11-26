@@ -192,12 +192,12 @@ private fun MediStockApp(context: Context, dao: MedicineDao, darkMode: Boolean, 
   addOpen = false
  }
  selected?.let { item -> StockDialog(item, mode, { selected = null }) { amount ->
-  val updated = if (mode == "IN") item.quantity + amount else item.quantity - amount
+  val updated = if (mode == "IN") item.boxQuantity + amount else item.boxQuantity - amount
   if (amount <= 0 || updated < 0) return@StockDialog
   scope.launch {
    dao.saveMovementAndQty(
-    StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.unitPrice, totalAmount = amount * item.unitPrice, shopId = activeShop?.id ?: selectedShopId),
-    updated
+    StockMovementEntity(medicineId = item.id, medicineName = item.name, movementType = mode, quantity = amount, unitPrice = item.boxPrice, totalAmount = amount * item.boxPrice, shopId = activeShop?.id ?: selectedShopId, boxCount = amount, boxPrice = item.boxPrice),
+    item.quantity, updated
    )
   }
   selected = null
@@ -371,7 +371,7 @@ private fun InventoryScreen(data: List<MedicineEntity>, search: String, onSearch
 }
 @Composable
 private fun MedicineCard(item: MedicineEntity, onStock: (MedicineEntity, String) -> Unit) {
- val low = item.quantity <= item.minimumStock
+ val low = item.boxQuantity <= item.minimumStock
  Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(21.dp), modifier = Modifier.fillMaxWidth()) {
   Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
    Row(verticalAlignment = Alignment.CenterVertically) {
@@ -720,7 +720,7 @@ private fun StockDialog(item: MedicineEntity, mode: String, close: () -> Unit, c
     Surface(color = if (isIn) Color(0xFF123426) else Color(0xFF38251D), shape = RoundedCornerShape(12.dp)) { Text(if (isIn) "STOCK IN" else "STOCK OUT", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = if (isIn) Color(0xFF63E6AC) else Color(0xFFFFB18B), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
    }
    OutlinedTextField(amount, { amount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("Quantity (boxes)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Green, cursorColor = Green))
-   if (!isIn && number > item.quantity) Text("Insufficient stock", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+   if (!isIn && number > item.boxQuantity) Text("Insufficient box stock", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
   }
  }, confirmButton = { Button(enabled = number > 0 && (isIn || number <= item.boxQuantity), onClick = { confirm(number) }, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color(0xFF062016))) { Text("Confirm movement", fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = close) { Text("Cancel") } })
 }
