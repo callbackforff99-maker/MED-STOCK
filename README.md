@@ -24,4 +24,4 @@ Planned Android and web apps with owner accounts, multiple shops, batch-level in
 - Google Drive stores encrypted backups, not the live database.
 
 ## Status
-Project foundation only. App code, production migrations, security policies, sync and backup flows are not implemented yet.
+STOCK X Android v2.0 implementation is in progress on `release/v2-zerox`. The v2 branch contains the Obsidian Emerald UI, Room v4 migration for box quantities and a date-based purchase shortlist. Cloud authentication, live sync and encrypted Google Drive backup remain separate pending work.
